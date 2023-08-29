@@ -1,0 +1,43 @@
+[package]
+name = "dioxus-free-icons"
+version = "0.6.0"
+edition = "2021"
+authors = ["Daiki Nishikawa <nd.12021218@gmail.com>"]
+description = "Use free svg icons in your Dioxus projects easily with dioxus-free-icons."
+license = "MIT"
+repository = "https://github.com/nissy-dev/dioxus-free-icons"
+readme = "../../README.md"
+
+[dependencies]
+dioxus = { version = "*" }
+
+[features]
+font-awesome-brands = []
+font-awesome-regular = []
+font-awesome-solid = []
+bootstrap = []
+feather = []
+octicons = []
+hero-icons-outline = []
+hero-icons-solid = []
+ionicons = []
+material-design-icons-action = []
+material-design-icons-alert = []
+material-design-icons-av = []
+material-design-icons-communication = []
+material-design-icons-content = []
+material-design-icons-device = []
+material-design-icons-editor = []
+material-design-icons-file = []
+material-design-icons-hardware = []
+material-design-icons-home = []
+material-design-icons-image = []
+material-design-icons-maps = []
+material-design-icons-navigation = []
+material-design-icons-notification = []
+material-design-icons-places = []
+material-design-icons-social = []
+material-design-icons-toggle = []
+
+[package.metadata.docs.rs]
+all-features = true
