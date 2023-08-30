@@ -1,7 +1,9 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 use crate::{
-    states::{DialogState, DialogType, MainState},
+    states::{DialogState, DialogType, MainState, LastEdited},
     views::icons::*,
 };
 
@@ -11,6 +13,8 @@ pub fn secrets_list(cx: Scope) -> Element {
     let filter_secret = use_state(cx, || "".to_string());
 
     let value_to_filter = filter_secret.get().to_lowercase();
+
+    let last_edited = use_shared_state::<LastEdited>(cx).unwrap().read().get_secret();
 
     match main_state.read().unwrap_as_secrets() {
         Some(templates) => {
@@ -23,9 +27,11 @@ pub fn secrets_list(cx: Scope) -> Element {
                 itm.name.to_lowercase().contains(&value_to_filter)
 
             }).map(|itm| {
-                let secret = itm.name.to_string();
-                let secret2 = itm.name.to_string();
-                let secret3 = itm.name.to_string();
+                let secret = Rc::new(itm.name.to_string());
+                let secret2 = secret.clone();
+                let secret3 = secret.clone();
+                let edit_button_secret = secret.clone();
+                let delete_secret_button = secret.clone();
 
                 let mut class_template =  "badge badge-success empty-links";
                 let mut class_secret =  class_template;
@@ -46,6 +52,15 @@ pub fn secrets_list(cx: Scope) -> Element {
                 let secret_amount = itm.secrets_amount;
                 let templates_amount = itm.templates_amount;
 
+                let last_edited = if &itm.name == last_edited.as_ref() {
+                    Some(rsx!(
+                        span { id: "last-edited-badge", class: "badge badge-success ", "Last edited" }
+                        script { r#"scroll_to('last-edited-badge')"# }
+                    ))
+                }else{
+                    None
+                };
+
                 rsx! {
                     tr { style: "border-top: 1px solid lightgray;",
                         td { style: "padding-left: 10px",
@@ -61,7 +76,7 @@ pub fn secrets_list(cx: Scope) -> Element {
                                             .write()
                                             .show_dialog(
                                                 format!("Show secret '{}' usage", secret2),
-                                                DialogType::SecretUsage(secret2.clone()),
+                                                DialogType::SecretUsage(secret2.to_string()),
                                             );
                                     },
                                     "{itm.templates_amount}"
@@ -81,14 +96,14 @@ pub fn secrets_list(cx: Scope) -> Element {
                                             .write()
                                             .show_dialog(
                                                 format!("Show secret '{}' usage", secret3),
-                                                DialogType::SecretUsageBySecret(secret3.clone()),
+                                                DialogType::SecretUsageBySecret(secret3.to_string()),
                                             );
                                     },
                                     "{itm.secrets_amount}"
                                 }
                             }
                         }
-                        td { style: "padding: 10px", "{itm.name}" }
+                        td { style: "padding: 10px", "{itm.name}", last_edited }
                         td { "{itm.level}" }
                         td { "{itm.created}" }
                         td { "{itm.updated}" }
@@ -102,13 +117,37 @@ pub fn secrets_list(cx: Scope) -> Element {
                                             .write()
                                             .show_dialog(
                                                 format!("Show [{}] secret value", secret),
-                                                DialogType::ShowSecret(secret.clone()),
+                                                DialogType::ShowSecret(secret.to_string()),
                                             );
                                     },
                                     view_template_icon {}
                                 }
-                                button { class: "btn btn-sm btn-primary", edit_icon {} }
-                                button { class: "btn btn-sm btn-danger", delete_icon {} }
+                                button {
+                                    class: "btn btn-sm btn-primary",
+                                    onclick: move |_| {
+                                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
+                                        dialog_state
+                                            .write()
+                                            .show_dialog(
+                                                format!("Edit secret").to_string(),
+                                                DialogType::EditSecret(edit_button_secret.to_string()),
+                                            );
+                                    },
+                                    edit_icon {}
+                                }
+                                button {
+                                    class: "btn btn-sm btn-danger",
+                                    onclick: move |_| {
+                                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
+                                        dialog_state
+                                            .write()
+                                            .show_dialog(
+                                                format!("Delete secret {}", delete_secret_button.as_str()).to_string(),
+                                                DialogType::DeleteSecret(delete_secret_button.to_string()),
+                                            );
+                                    },
+                                    delete_icon {}
+                                }
                             }
                         }
                     }

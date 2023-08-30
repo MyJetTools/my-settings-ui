@@ -1,0 +1,39 @@
+
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+package templates;
+
+
+message GetTemplateRequest {
+   string Env = 1;
+   string Name = 2;
+}
+
+message GetTemplateResponse {
+    string Yaml = 1;
+ }
+
+
+
+message CompileYamlRequest {
+    string Env = 1;
+    string Name = 2;
+ }
+
+ message  CompileYamlResponse {
+    string Yaml = 1;
+ }
+
+
+ message SaveTemplateRequest {
+   string Env = 1;
+   string Name = 2;
+   string Yaml = 3;
+}
+
+service Templates {
+    rpc Get(GetTemplateRequest) returns (GetTemplateResponse);
+    rpc Save(SaveTemplateRequest) returns (google.protobuf.Empty);
+    rpc CompileYaml(CompileYamlRequest) returns (CompileYamlResponse);
+    rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
+ }

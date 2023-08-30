@@ -7,6 +7,7 @@ use salvo::prelude::*;
 
 mod api_client;
 mod app_ctx;
+mod grpc_client;
 mod http_server;
 mod settings;
 mod states;
@@ -22,6 +23,11 @@ lazy_static::lazy_static! {
     pub static ref APP_CTX: AppCtx = {
         AppCtx::new()
     };
+}
+
+#[allow(non_snake_case)]
+pub mod templates_grpc {
+    tonic::include_proto!("templates");
 }
 
 #[tokio::main]
@@ -45,6 +51,7 @@ async fn main() {
 fn app(cx: Scope) -> Element {
     use_shared_state_provider(cx, || MainState::Nothing);
     use_shared_state_provider(cx, || DialogState::Hidden);
+    use_shared_state_provider(cx, || LastEdited::new());
 
     render! {
         div { id: "layout",

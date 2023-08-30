@@ -1,6 +1,12 @@
 pub enum DialogType {
     ShowSecret(String),
     AddSecret,
+    EditSecret(String),
+    DeleteSecret(String),
+
+    AddTemplate,
+    EditTemplate { env: String, name: String },
+    ShowPopulatedYaml { env: String, name: String },
     SecretUsage(String),
     SecretUsageBySecret(String),
 }

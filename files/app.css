@@ -88,9 +88,11 @@ body {
     top: 0;
     width: var(--total-width);
     height: var(--total-height);
-    background-color: rgba(0, 0, 0, 0.9);
+    background-color: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(10px);
 }
+
+
 
 .modal-dialog {
     width: 80%;
@@ -99,6 +101,16 @@ body {
     margin-top: 5px;
     border-radius: 10px;
     border: 1px solid gray;
+}
+
+.modal-dialog-narrow {
+    width: 500px;
+    background-color: white;
+    padding: 10px;
+    margin-top: 5px;
+    border-radius: 10px;
+    border: 1px solid gray;
+    margin: 100px auto;
 }
 
 .modal-header {
@@ -117,4 +129,18 @@ body {
 
 .have-no-links {
     background-color: red;
+}
+
+.modal-content-full-screen {
+    height: calc(var(--total-height)*0.9);
+    text-align: left;
+    overflow-y: auto;
+    font-family: monospace;
+}
+
+#last-edited-badge {
+    background: #FF9800 !important;
+    padding: 5px !important;
+    color: white !important;
+    margin-left: 10px !important;
 }

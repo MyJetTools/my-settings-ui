@@ -18,3 +18,9 @@ function hide_panel() {
 }
 
 
+
+
+function scroll_to(id) {
+    let el = document.getElementById(id);
+    el.scrollIntoView();
+}

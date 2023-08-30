@@ -35,11 +35,7 @@ pub fn show_secret_usage_by_secret<'s>(cx: Scope<'s, ShowSecretUsageProps>) -> E
 
             render! {
                 div { class: "modal-content",
-                    div {
-                        class: "form-control",
-                        style: "height: calc(var(--total-height)*0.9); text-align: left; overflow-y: auto;font-family: monospace;",
-                        to_render
-                    }
+                    div { class: "form-control modal-content-full-screen", to_render }
                 }
             }
         }

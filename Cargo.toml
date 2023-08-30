@@ -24,6 +24,11 @@ dioxus-free-icons = { path = "./libs/icon-packages/lib", features = [
     "ionicons",
 ] }
 
+my-grpc-extensions = { tag = "0.4.0", git = "https://github.com/MyJetTools/my-grpc-extensions.git" }
+my-grpc-client-macros = { tag = "0.1.0", git = "https://github.com/MyJetTools/my-grpc-client-macros.git" }
+my-telemetry = { tag = "0.3.0", git = "https://github.com/MyJetTools/my-telemetry.git" }
+
+
 tokio = { version = "*", features = ["full"] }
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
@@ -39,3 +44,7 @@ salvo = { version = "*", features = ["full", "affix", "ws"] }
 once_cell = "*"
 async-trait = "*"
 lazy_static = "*"
+
+
+[build-dependencies]
+ci-utils = { git = "https://github.com/MyJetTools/ci-utils.git", tag = "0.1.0" }
