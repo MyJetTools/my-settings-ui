@@ -1,20 +1,24 @@
-use std::net::SocketAddr;
 use std::sync::Arc;
 
 use dioxus_liveview::LiveViewPool;
 
+use rust_extensions::StrOrString;
 use salvo::http::HeaderValue;
 use salvo::prelude::*;
 
 #[handler]
 pub fn index(res: &mut Response) {
-    let addr: SocketAddr = ([127, 0, 0, 1], 9001).into();
     res.headers.append(
         "Content-Type",
         HeaderValue::from_bytes("text/html; charset=uft-8".as_bytes()).unwrap(),
     );
 
-    res.write_body(super::static_resources::get_html(addr).into_bytes())
+    let ws: StrOrString<'static> = match std::env::var("WS_HOST") {
+        Ok(ws) => ws.into(),
+        Err(_) => "ws://localhost:9001".into(),
+    };
+
+    res.write_body(super::static_resources::get_html(ws.as_str()).into_bytes())
         .unwrap();
 }
 
