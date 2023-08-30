@@ -7,6 +7,7 @@ use crate::settings::SettingsReader;
 pub struct AppCtxInner {
     settings_reader: Arc<SettingsReader>,
     pub templates_grpc: Arc<TemplatesGrpcClient>,
+    pub secrets_grpc: Arc<SecretsGrpcClient>,
 }
 
 pub struct AppCtx {
@@ -25,6 +26,7 @@ impl AppCtx {
 
         write_access.replace(Arc::new(AppCtxInner {
             templates_grpc: Arc::new(TemplatesGrpcClient::new(settings_reader.clone())),
+            secrets_grpc: Arc::new(SecretsGrpcClient::new(settings_reader.clone())),
             settings_reader: settings_reader,
         }));
     }
@@ -37,5 +39,10 @@ impl AppCtx {
     pub async fn get_templates_grpc_client(&self) -> Arc<TemplatesGrpcClient> {
         let read_access = self.inner.read().await;
         read_access.as_ref().unwrap().templates_grpc.clone()
+    }
+
+    pub async fn get_secrets_grpc_client(&self) -> Arc<SecretsGrpcClient> {
+        let read_access = self.inner.read().await;
+        read_access.as_ref().unwrap().secrets_grpc.clone()
     }
 }

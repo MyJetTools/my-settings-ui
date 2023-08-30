@@ -40,6 +40,11 @@ pub fn render_dialog(cx: Scope) -> Element {
                     rsx! { edit_template { env: env.to_string(), name: name.to_string() } }
                 }
 
+                DialogType::DeleteTemplate { env, name } => {
+                    dialog_class = "modal-dialog-narrow";
+                    rsx! { delete_template { env: env.to_string(), name: name.to_string() } }
+                }
+
                 DialogType::ShowPopulatedYaml { env, name } => {
                     rsx! { show_populated_yaml { env: env.to_string(), name: name.to_string() } }
                 }

@@ -1,18 +1,11 @@
-mod get_all_templates;
-pub use get_all_templates::*;
+//mod get_all_templates;
+//pub use get_all_templates::*;
 mod get_all_secrets;
 pub use get_all_secrets::*;
-mod get_secret_value;
-pub use get_secret_value::*;
-mod get_templates_usage;
-pub use get_templates_usage::*;
-mod get_secrets_usage;
-pub use get_secrets_usage::*;
-mod load_secret;
-pub use load_secret::*;
+
+//mod load_secret;
+//pub use load_secret::*;
 mod save_secret;
 pub use save_secret::*;
 mod delete_secret;
 pub use delete_secret::*;
-mod get_template_value;
-pub use get_template_value::*;

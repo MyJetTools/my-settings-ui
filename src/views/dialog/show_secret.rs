@@ -40,10 +40,10 @@ fn load_secret<'s>(cx: &Scope<'s, ShowSecretProps>, secret_id: String, state: &U
     let state = state.to_owned();
 
     cx.spawn(async move {
-        let response = crate::api_client::get_secret_value(secret_id)
+        let response = crate::grpc_client::SecretsGrpcClient::get_secret(secret_id)
             .await
             .unwrap();
 
-        state.set(response)
+        state.set(response.value)
     });
 }

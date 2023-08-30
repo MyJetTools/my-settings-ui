@@ -1,13 +1,14 @@
 use dioxus::prelude::*;
 
-use crate::api_client::SecretUsageBySecretModel;
+use crate::secrets_grpc::SecretUsageModel;
+
 #[derive(Props, PartialEq, Eq)]
 pub struct ShowSecretUsageProps {
     pub secret: String,
 }
 
 pub fn show_secret_usage_by_secret<'s>(cx: Scope<'s, ShowSecretUsageProps>) -> Element {
-    let secret_usage: &UseState<Option<Vec<SecretUsageBySecretModel>>> = use_state(cx, || None);
+    let secret_usage: &UseState<Option<Vec<SecretUsageModel>>> = use_state(cx, || None);
 
     match secret_usage.get() {
         Some(values) => {
@@ -50,12 +51,12 @@ pub fn show_secret_usage_by_secret<'s>(cx: Scope<'s, ShowSecretUsageProps>) -> E
 fn load_secret_usage<'s>(
     cx: &Scope<'s, ShowSecretUsageProps>,
     secret_id: String,
-    state: &UseState<Option<Vec<SecretUsageBySecretModel>>>,
+    state: &UseState<Option<Vec<SecretUsageModel>>>,
 ) {
     let state = state.to_owned();
 
     cx.spawn(async move {
-        let response = crate::api_client::get_secrets_usage(secret_id)
+        let response = crate::grpc_client::SecretsGrpcClient::get_usage_of_secrets(secret_id)
             .await
             .unwrap();
 

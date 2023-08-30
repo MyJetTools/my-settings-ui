@@ -17,10 +17,10 @@ pub fn templates_list(cx: Scope) -> Element {
     match main_state.read().unwrap_as_templates() {
         Some(templates) => {
             let templates = templates.iter().map(|itm| {
-                let last_request = if itm.last_request == 0 {
+                let last_request = if itm.last_requests == 0 {
                     "".to_string()
                 } else {
-                    let last_request = DateTimeAsMicroseconds::new(itm.last_request * 1000);
+                    let last_request = DateTimeAsMicroseconds::new(itm.last_requests * 1000);
                     last_request.to_rfc3339()
                 };
 
@@ -29,6 +29,9 @@ pub fn templates_list(cx: Scope) -> Element {
 
                 let show_populated_yaml_env = env.clone();
                 let show_populated_yaml_name = name.clone();
+
+                let delete_template_env = env.clone();
+                let delete_template_name = name.clone();
 
                 let last_edited = if last_edited.0.as_str() == env.as_str() && last_edited.1.as_str() == name.as_str(){
                     Some(rsx!(
@@ -83,7 +86,25 @@ pub fn templates_list(cx: Scope) -> Element {
                                     },
                                     edit_icon {}
                                 }
-                                button { class: "btn btn-sm btn-danger", delete_icon {} }
+                                button {
+                                    class: "btn btn-sm btn-danger",
+                                    onclick: move |_| {
+                                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
+                                        dialog_state
+                                            .write()
+                                            .show_dialog(
+                                                format!(
+                                                    "Delete template {}/{}", delete_template_env.as_str(),
+                                                    delete_template_name.as_str()
+                                                ),
+                                                DialogType::DeleteTemplate {
+                                                    env: delete_template_env.to_string(),
+                                                    name: delete_template_name.to_string(),
+                                                },
+                                            );
+                                    },
+                                    delete_icon {}
+                                }
                             }
                         }
                     }
@@ -128,7 +149,9 @@ fn load_templates(cx: &Scope, main_state: &UseSharedState<MainState>) {
     let main_state = main_state.to_owned();
 
     cx.spawn(async move {
-        let response = crate::api_client::get_list_of_templates().await.unwrap();
+        let response = crate::grpc_client::TemplatesGrpcClient::get_all_templates()
+            .await
+            .unwrap();
 
         main_state.write().set_templates(Some(response));
     });

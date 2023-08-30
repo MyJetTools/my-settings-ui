@@ -203,7 +203,9 @@ fn load_secret<'s>(
     let dialog_state = dialog_state.to_owned();
 
     cx.spawn(async move {
-        let response = crate::api_client::load_secret(secret_id).await.unwrap();
+        let response = crate::grpc_client::SecretsGrpcClient::get_secret(secret_id)
+            .await
+            .unwrap();
         dialog_state.modify(|itm| itm.set_loaded_values(response.value, response.level));
     });
 }

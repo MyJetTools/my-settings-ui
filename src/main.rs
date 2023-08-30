@@ -30,6 +30,11 @@ pub mod templates_grpc {
     tonic::include_proto!("templates");
 }
 
+#[allow(non_snake_case)]
+pub mod secrets_grpc {
+    tonic::include_proto!("secrets");
+}
+
 #[tokio::main]
 async fn main() {
     let settings_reader = crate::settings::SettingsReader::new(".my-settings-ui").await;
