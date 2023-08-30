@@ -1,0 +1,63 @@
+name: Release App
+on:
+  push:
+    tags: "*"
+
+env:
+  IMAGE_NAME: myjettools/my-settings-ui
+
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev          
+
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=VERSION::$(echo ${GITHUB_REF_NAME})
+
+      - name: Updating version
+        run: sed -i -e 's/^version = .*/version = "${{ steps.get_version.outputs.VERSION }}"/' Cargo.toml
+
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1      
+
+      - run: openssl version
+
+      - run: echo $LD_LIBRARY_PATH
+
+      - run: sudo apt install build-essential -y
+      - run: sudo apt install libglib2.0-dev -y
+      - run: sudo apt install pkg-config libssl-dev -y
+      - run: sudo apt install libgtk-3-dev -y
+
+      - run: sudo apt upgrade -y
+
+      - run: sudo apt update -y
+
+      - run: sudo apt-get install javascriptcoregtk-4.1 libsoup-3.0 webkit2gtk-4.1 -y
+
+
+              
+      - run: cargo build --release
+
+      - name: Docker login
+        env:
+          DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASS: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          echo "$DOCKER_PASS" | docker login --username "$DOCKER_USER" --password-stdin 
+            
+      - name: Docker Build and Publish
+        run: |
+          ver=$(cat Cargo.toml | grep -m1 version | grep  -Eo '["\047].*["\047]' | tr -d '"')
+          echo $ver
+          docker build -t ${IMAGE_NAME}:${{ steps.get_version.outputs.VERSION }} .
+          docker push ${IMAGE_NAME}:${{ steps.get_version.outputs.VERSION }}
