@@ -35,22 +35,22 @@ pub fn secrets_list(cx: Scope) -> Element {
 
                 let mut class_template =  "badge badge-success empty-links";
                 let mut class_secret =  class_template;
-                if itm.templates_amount == 0 && itm.secrets_amount == 0 {
+                if itm.used_by_templates == 0 && itm.used_by_secrets == 0 {
                     class_template = "badge badge-danger have-no-links";
                     class_secret = class_template;
                 } else {
-                    if itm.templates_amount > 0 {
+                    if itm.used_by_templates > 0 {
                         class_template =  "badge badge-success have-links";
                     }
 
-                    if itm.secrets_amount > 0 {
+                    if itm.used_by_secrets > 0 {
                         class_secret =  "badge badge-success have-links";
                     }
                    
                 };
 
-                let secret_amount = itm.secrets_amount;
-                let templates_amount = itm.templates_amount;
+                let secret_amount = itm.used_by_secrets;
+                let templates_amount = itm.used_by_templates;
 
                 let last_edited = if &itm.name == last_edited.as_ref() {
                     Some(rsx!(
@@ -79,7 +79,7 @@ pub fn secrets_list(cx: Scope) -> Element {
                                                 DialogType::SecretUsage(secret2.to_string()),
                                             );
                                     },
-                                    "{itm.templates_amount}"
+                                    "{itm.used_by_templates}"
                                 }
                             }
                         }
@@ -99,7 +99,7 @@ pub fn secrets_list(cx: Scope) -> Element {
                                                 DialogType::SecretUsageBySecret(secret3.to_string()),
                                             );
                                     },
-                                    "{itm.secrets_amount}"
+                                    "{itm.used_by_secrets}"
                                 }
                             }
                         }
@@ -207,7 +207,11 @@ fn load_templates(cx: &Scope, main_state: &UseSharedState<MainState>) {
     let main_state = main_state.to_owned();
 
     cx.spawn(async move {
-        let response = crate::api_client::get_list_of_secrets().await.unwrap();
+       // let response = crate::api_client::get_list_of_secrets().await.unwrap();
+
+       let response = crate::grpc_client::SecretsGrpcClient::get_all_secrets()
+            .await
+            .unwrap();
 
         main_state.write().set_secrets(Some(response));
     });

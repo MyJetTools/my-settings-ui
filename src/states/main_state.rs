@@ -1,9 +1,9 @@
-use crate::{api_client::SecretModel, templates_grpc::TemplateListItem};
+use crate::{secrets_grpc::SecretListItem, templates_grpc::TemplateListItem};
 
 pub enum MainState {
     Nothing,
     Templates(Option<Vec<TemplateListItem>>),
-    Secrets(Option<Vec<SecretModel>>),
+    Secrets(Option<Vec<SecretListItem>>),
 }
 
 impl MainState {
@@ -21,7 +21,7 @@ impl MainState {
         }
     }
 
-    pub fn set_secrets(&mut self, secrets: Option<Vec<SecretModel>>) {
+    pub fn set_secrets(&mut self, secrets: Option<Vec<SecretListItem>>) {
         *self = Self::Secrets(secrets);
     }
 
@@ -36,7 +36,7 @@ impl MainState {
         }
     }
 
-    pub fn unwrap_as_secrets(&self) -> &Option<Vec<SecretModel>> {
+    pub fn unwrap_as_secrets(&self) -> &Option<Vec<SecretListItem>> {
         match self {
             Self::Secrets(data) => data,
             _ => panic!("Not a templates state"),

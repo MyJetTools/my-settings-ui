@@ -46,7 +46,9 @@ fn do_delete_secret<'s>(cx: &'s Scoped<'s, DeleteSecretProps>) {
         use_shared_state::<DialogState>(cx).unwrap().to_owned();
 
     cx.spawn(async move {
-        crate::api_client::delete_secret(name).await.unwrap();
+        crate::grpc_client::SecretsGrpcClient::delete_secret(name)
+            .await
+            .unwrap();
 
         dialog_state.write().hide_dialog();
         main_state.write().set_secrets(None);

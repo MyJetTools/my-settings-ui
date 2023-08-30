@@ -9,14 +9,25 @@ use crate::states::{DialogState, DialogType, LastEdited, MainState};
 pub fn templates_list(cx: Scope) -> Element {
     let main_state = use_shared_state::<MainState>(cx).unwrap();
 
+    let filter = use_state(cx, || "".to_string());
+
     let last_edited = use_shared_state::<LastEdited>(cx)
         .unwrap()
         .read()
         .get_template();
 
+    let value_to_filter = filter.get().to_lowercase();
+
     match main_state.read().unwrap_as_templates() {
         Some(templates) => {
-            let templates = templates.iter().map(|itm| {
+            let templates = templates.iter().filter(|itm|{
+                if value_to_filter.len() == 0 {
+                    return true;
+                }
+
+                itm.name.to_lowercase().contains(&value_to_filter)
+
+            }).map(|itm| {
                 let last_request = if itm.last_requests == 0 {
                     "".to_string()
                 } else {
@@ -114,7 +125,24 @@ pub fn templates_list(cx: Scope) -> Element {
                 table { class: "table table-striped", style: "text-align: left;",
                     tr {
                         th { "Env" }
-                        th { "Name" }
+                        th {
+                            table {
+                                tr {
+                                    td { "Name" }
+                                    td { style: "width:100%",
+                                        div { class: "input-group",
+                                            span { class: "input-group-text", search_icon {} }
+                                            input {
+                                                class: "form-control form-control-sm",
+                                                oninput: move |cx| {
+                                                    filter.set(cx.value.to_string());
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         th { "Created" }
                         th { "Updated" }
                         th { "Last request" }

@@ -5,7 +5,6 @@ use dioxus::prelude::*;
 use dioxus_liveview::LiveViewPool;
 use salvo::prelude::*;
 
-mod api_client;
 mod app_ctx;
 mod grpc_client;
 mod http_server;

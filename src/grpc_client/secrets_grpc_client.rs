@@ -36,6 +36,75 @@ impl SecretsGrpcClient {
         }
     }
 
+    pub async fn get_all_secrets() -> Result<Vec<SecretListItem>, String> {
+        let result = tokio::spawn(async move {
+            let grpc_client = APP_CTX.get_secrets_grpc_client().await;
+
+            let result = grpc_client.get_all((), &MyTelemetryContext::new()).await;
+
+            match result {
+                Ok(result) => match result {
+                    Some(result) => Ok(result),
+                    None => Ok(vec![]),
+                },
+                Err(err) => Err(format!("{:?}", err)),
+            }
+        })
+        .await;
+
+        match result {
+            Ok(result) => result,
+            Err(err) => Err(format!("{:?}", err)),
+        }
+    }
+
+    pub async fn save_secret(name: String, value: String, level: i32) -> Result<(), String> {
+        let result = tokio::spawn(async move {
+            let grpc_client = APP_CTX.get_secrets_grpc_client().await;
+
+            let result = grpc_client
+                .save(
+                    SaveSecretRequest {
+                        model: Some(SecretModel { name, value, level }),
+                    },
+                    &MyTelemetryContext::new(),
+                )
+                .await;
+
+            match result {
+                Ok(result) => Ok(result),
+                Err(err) => Err(format!("{:?}", err)),
+            }
+        })
+        .await;
+
+        match result {
+            Ok(result) => result,
+            Err(err) => Err(format!("{:?}", err)),
+        }
+    }
+
+    pub async fn delete_secret(name: String) -> Result<(), String> {
+        let result = tokio::spawn(async move {
+            let grpc_client = APP_CTX.get_secrets_grpc_client().await;
+
+            let result = grpc_client
+                .delete(DeleteSecretRequest { name }, &MyTelemetryContext::new())
+                .await;
+
+            match result {
+                Ok(result) => Ok(result),
+                Err(err) => Err(format!("{:?}", err)),
+            }
+        })
+        .await;
+
+        match result {
+            Ok(result) => result,
+            Err(err) => Err(format!("{:?}", err)),
+        }
+    }
+
     pub async fn get_usage_of_templates(name: String) -> Result<Vec<TemplateUsageModel>, String> {
         let result = tokio::spawn(async move {
             let grpc_client = APP_CTX.get_secrets_grpc_client().await;

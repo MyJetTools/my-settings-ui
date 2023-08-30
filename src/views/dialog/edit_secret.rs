@@ -230,7 +230,7 @@ fn save_secret<'s>(
     let last_edited: UseSharedState<LastEdited> = use_shared_state(cx).unwrap().to_owned();
 
     cx.spawn(async move {
-        crate::api_client::save_secret(name.clone(), value, level)
+        crate::grpc_client::SecretsGrpcClient::save_secret(name.clone(), value, level)
             .await
             .unwrap();
 
