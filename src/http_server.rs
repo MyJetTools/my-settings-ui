@@ -2,21 +2,28 @@ use std::sync::Arc;
 
 use dioxus_liveview::LiveViewPool;
 
-use rust_extensions::StrOrString;
 use salvo::http::HeaderValue;
 use salvo::prelude::*;
 
 #[handler]
-pub fn index(res: &mut Response) {
+pub fn index(req: &Request, res: &mut Response) {
     res.headers.append(
         "Content-Type",
         HeaderValue::from_bytes("text/html; charset=uft-8".as_bytes()).unwrap(),
     );
 
-    let ws: StrOrString<'static> = match std::env::var("WS_HOST") {
-        Ok(ws) => ws.into(),
-        Err(_) => "ws://localhost:9001".into(),
+    let host = match req.headers().get("Host") {
+        Some(value) => value.to_str().unwrap(),
+        None => "localhost:9001",
     };
+
+    let scheme = if host.starts_with("localhost") || host.starts_with("127.0.0") {
+        "ws"
+    } else {
+        "wss"
+    };
+
+    let ws = format!("{}://{}", scheme, host);
 
     res.write_body(super::static_resources::get_html(ws.as_str()).into_bytes())
         .unwrap();
