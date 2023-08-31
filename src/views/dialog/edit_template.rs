@@ -11,17 +11,23 @@ use crate::{
 pub struct EditTemplateProps {
     pub env: String,
     pub name: String,
+    pub copy_from_template: bool,
 }
 pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
     let edit_state = use_state(cx, || {
-        EditTemplateState::new(cx.props.env.to_string(), cx.props.name.to_string())
+        EditTemplateState::new(
+            cx.props.env.to_string(),
+            cx.props.name.to_string(),
+            cx.props.copy_from_template,
+        )
     });
 
-    let (edit_mode, yaml_loaded, env_name_read_only, save_button_disabled) = {
+    let (edit_mode, copy_from_model, yaml_loaded, env_name_read_only, save_button_disabled) = {
         let edit_state = edit_state.get();
 
         (
             edit_state.is_edit_mode(),
+            edit_state.is_copy_from_model(),
             edit_state.is_loaded(),
             edit_state.is_edit_mode(),
             !edit_state.save_button_enabled(),
@@ -29,9 +35,12 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
     };
 
     if edit_mode && !yaml_loaded {
-        load_template(&cx, edit_state);
+        load_template(&cx, &cx.props.env, &cx.props.name, edit_state);
     }
 
+    if let Some(copy_from_model) = copy_from_model {
+        load_template(&cx, &copy_from_model.0, &copy_from_model.1, edit_state);
+    }
     render! {
         div { class: "modal-content",
             div { class: "form-floating mb-3",
@@ -94,10 +103,12 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
 
 pub fn load_template<'s>(
     cx: &'s Scope<'s, EditTemplateProps>,
+    env: &str,
+    name: &str,
     state: &UseState<EditTemplateState>,
 ) {
-    let env = state.get_env().to_string();
-    let name = state.get_name().to_string();
+    let env = env.to_string();
+    let name = name.to_string();
 
     let state = state.to_owned();
 
@@ -139,19 +150,34 @@ pub struct EditTemplateState {
     env: String,
     name: String,
     edit_mode: bool,
+    copy_from: Option<(String, String)>,
     yaml: String,
     loaded: Option<Rc<String>>,
 }
 
 impl EditTemplateState {
-    pub fn new(env: String, name: String) -> Self {
-        Self {
-            edit_mode: env.len() > 0,
-            env: env.to_string(),
-            name: name.to_string(),
+    pub fn new(env: String, name: String, copy_from: bool) -> Self {
+        let edit_mode = if copy_from { false } else { env.len() > 0 };
 
-            yaml: "".to_string(),
-            loaded: None,
+        if copy_from {
+            Self {
+                edit_mode,
+                env: env.to_string(),
+                name: "".to_string(),
+
+                yaml: "".to_string(),
+                loaded: None,
+                copy_from: Some((env, name)),
+            }
+        } else {
+            Self {
+                edit_mode,
+                env,
+                name,
+                yaml: "".to_string(),
+                loaded: None,
+                copy_from: None,
+            }
         }
     }
 
@@ -168,6 +194,10 @@ impl EditTemplateState {
 
     pub fn is_edit_mode(&self) -> bool {
         self.edit_mode
+    }
+
+    pub fn is_copy_from_model(&self) -> &Option<(String, String)> {
+        &self.copy_from
     }
 
     pub fn is_loaded(&self) -> bool {
@@ -193,6 +223,7 @@ impl EditTemplateState {
             edit_mode: self.edit_mode,
             yaml: self.yaml.to_string(),
             loaded: self.loaded.clone(),
+            copy_from: self.copy_from.clone(),
         }
     }
 
@@ -203,6 +234,7 @@ impl EditTemplateState {
             edit_mode: self.edit_mode,
             yaml: self.yaml.to_string(),
             loaded: self.loaded.clone(),
+            copy_from: self.copy_from.clone(),
         }
     }
 
@@ -213,6 +245,7 @@ impl EditTemplateState {
             edit_mode: self.edit_mode,
             yaml,
             loaded: self.loaded.clone(),
+            copy_from: self.copy_from.clone(),
         }
     }
 
@@ -223,6 +256,7 @@ impl EditTemplateState {
             edit_mode: self.edit_mode,
             yaml: yaml.clone(),
             loaded: Some(Rc::new(yaml)),
+            copy_from: self.copy_from.clone(),
         }
     }
 }

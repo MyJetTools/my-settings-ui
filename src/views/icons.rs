@@ -30,6 +30,10 @@ pub fn search_icon(cx: Scope) -> Element {
     cx.render(rsx! { Icon { width: 16, height: 16, fill: "gray", icon: BsSearch } })
 }
 
+pub fn copy_from_icon(cx: Scope) -> Element {
+    cx.render(rsx! { Icon { width: 10, height: 10, fill: "white", icon: BsStickies } })
+}
+
 pub fn warning_icon(cx: Scope) -> Element {
     cx.render(rsx! { Icon { width: 16, height: 16, fill: "orange", icon: BsShieldExclamation } })
 }

@@ -44,6 +44,9 @@ pub fn templates_list(cx: Scope) -> Element {
                 let delete_template_env = env.clone();
                 let delete_template_name = name.clone();
 
+                let copy_env = env.clone();
+                let copy_name = name.clone();
+
                 let last_edited = if last_edited.0.as_str() == env.as_str() && last_edited.1.as_str() == name.as_str(){
                     Some(rsx!(
                         span { id: "last-edited-badge", class: "badge badge-success ", "Last edited" }
@@ -105,6 +108,23 @@ pub fn templates_list(cx: Scope) -> Element {
                                             );
                                     },
                                     edit_icon {}
+                                }
+                                button {
+                                    class: "btn btn-sm btn-warning",
+                                    title: "Copy from this template",
+                                    onclick: move |_| {
+                                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
+                                        dialog_state
+                                            .write()
+                                            .show_dialog(
+                                                "Edit template".to_string(),
+                                                DialogType::AddTemplateFromOtherTemplate {
+                                                    env: copy_env.to_string(),
+                                                    name: copy_name.to_string(),
+                                                },
+                                            );
+                                    },
+                                    copy_from_icon {}
                                 }
                                 button {
                                     class: "btn btn-sm btn-danger",

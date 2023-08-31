@@ -33,11 +33,15 @@ pub fn render_dialog(cx: Scope) -> Element {
                 }
 
                 DialogType::AddTemplate => {
-                    rsx! { edit_template { env: "".to_string(), name: "".to_string() } }
+                    rsx! {edit_template { env: "".to_string(), name: "".to_string(), copy_from_template: false }}
+                }
+
+                DialogType::AddTemplateFromOtherTemplate{env, name} => {
+                    rsx! { edit_template { env: env.clone(), name: name.clone(), copy_from_template: true } }
                 }
 
                 DialogType::EditTemplate { env, name } => {
-                    rsx! { edit_template { env: env.to_string(), name: name.to_string() } }
+                    rsx! {edit_template { env: env.to_string(), name: name.to_string(), copy_from_template: false }}
                 }
 
                 DialogType::DeleteTemplate { env, name } => {
