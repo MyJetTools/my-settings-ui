@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::states::MainState;
+use crate::{states::MainState, APP_CTX};
 
 const ACTIVE_CLASS: &str = "menu-active";
 
@@ -20,9 +20,28 @@ pub fn left_panel(cx: Scope) -> Element {
         }
     }
 
+    let env_name = use_state(cx, || "".to_string());
+
+    if env_name.get() == "" {
+        let env_name_own = env_name.to_owned();
+
+        cx.spawn(async move {
+            let env_name = tokio::spawn(async move {
+                let reader = APP_CTX.get_settings_reader().await;
+                reader.get_env_name().await
+            })
+            .await
+            .unwrap();
+
+            println!("env_name: {}", env_name);
+
+            env_name_own.set(env_name);
+        });
+    }
+
     render! {
-        h1 { "Setting" }
-        h4 { id: "env-type", "demo" }
+        h1 { "Settings" }
+        h4 { id: "env-type", "{env_name.get()}" }
 
         div { id: "menu",
             div {
