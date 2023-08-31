@@ -29,6 +29,8 @@ my-grpc-client-macros = { tag = "0.1.0", git = "https://github.com/MyJetTools/my
 my-telemetry = { tag = "0.3.0", git = "https://github.com/MyJetTools/my-telemetry.git" }
 
 
+settings-utils = { tag = "0.1.0", git = "https://github.com/MyJetTools/settings-utils.git" }
+
 tokio = { version = "*", features = ["full"] }
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"

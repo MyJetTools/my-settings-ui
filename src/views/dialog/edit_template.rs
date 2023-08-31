@@ -1,8 +1,9 @@
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 use dioxus::prelude::*;
 
 use crate::{
+    secrets_grpc::SecretModel,
     states::{DialogState, LastEdited, MainState},
     views::icons::*,
 };
@@ -21,6 +22,9 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
             cx.props.copy_from_template,
         )
     });
+
+    let secrets_state: &UseState<HashMap<String, Option<SecretModel>>> =
+        use_state(cx, || HashMap::new());
 
     let (edit_mode, copy_from_model, yaml_loaded, env_name_read_only, save_button_disabled) = {
         let edit_state = edit_state.get();
@@ -41,42 +45,98 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
     if let Some(copy_from_model) = copy_from_model {
         load_template(&cx, &copy_from_model.0, &copy_from_model.1, edit_state);
     }
+
+    let mut secrets = Vec::new();
+
+    let mut secret_is_loading = false;
+
+    for secret_name in settings_utils::placeholders::get_secret_names(edit_state.get_yaml()) {
+        let (secret_value, secret_level) = match secrets_state.get().get(secret_name) {
+            Some(value) => match value {
+                Some(value) => (
+                    rsx! { div { style:"font-size:12px", "{value.value}" } },
+                    rsx! {div{ style:"font-size:12px", "{value.level}"}},
+                ),
+                None => (
+                    rsx! { div { style: "color:red", "Value not found" } },
+                    rsx! {div{}},
+                ),
+            },
+            None => {
+                if !secret_is_loading {
+                    load_secret(&cx, secret_name, secrets_state);
+                    secret_is_loading = true;
+                }
+
+                (
+                    rsx! { div { style: "color:orange", "Value not loaded" } },
+                    rsx! {div{}},
+                )
+            }
+        };
+
+        secrets.push(rsx! {
+            tr {
+                td { style: "font-size:12px", "{secret_name}:" }
+                td { width: "100%", secret_value }
+                td { width: "30px", secret_level }
+            }
+        });
+    }
+    let secrets = rsx! {
+        table { class: "table table-striped",
+            tr {
+                th { "secret" }
+                th { "value" }
+                th { "level" }
+            }
+            secrets.into_iter()
+        }
+    };
+
     render! {
         div { class: "modal-content",
-            div { class: "form-floating mb-3",
-                input {
-                    class: "form-control",
-                    readonly: env_name_read_only,
-                    oninput: move |cx| {
-                        edit_state.modify(|itm| itm.set_env(cx.value.to_string()));
-                    },
-                    value: "{edit_state.get_env()}"
-                }
+            table { style: "width:100%",
+                tr {
+                    td { style: "width:60%",
+                        div { class: "form-floating mb-3",
+                            input {
+                                class: "form-control",
+                                readonly: env_name_read_only,
+                                oninput: move |cx| {
+                                    edit_state.modify(|itm| itm.set_env(cx.value.to_string()));
+                                },
+                                value: "{edit_state.get_env()}"
+                            }
 
-                label { "Env" }
-            }
+                            label { "Env" }
+                        }
 
-            div { class: "form-floating mb-3",
-                input {
-                    class: "form-control",
-                    readonly: env_name_read_only,
-                    oninput: move |cx| {
-                        edit_state.modify(|itm| itm.set_name(cx.value.to_string()));
-                    },
-                    value: "{edit_state.get_name()}"
+                        div { class: "form-floating mb-3",
+                            input {
+                                class: "form-control",
+                                readonly: env_name_read_only,
+                                oninput: move |cx| {
+                                    edit_state.modify(|itm| itm.set_name(cx.value.to_string()));
+                                },
+                                value: "{edit_state.get_name()}"
+                            }
+                            label { "Name" }
+                        }
+                        div { class: "form-floating mb-3",
+                            textarea {
+                                class: "form-control",
+                                style: "min-height:500px;font-family: monospace;",
+                                oninput: move |cx| {
+                                    edit_state.modify(|itm| itm.set_yaml(cx.value.to_string()));
+                                },
+                                value: "{edit_state.get_yaml()}"
+                            }
+                            label { "Yaml" }
+                        }
+                    }
+                    td { style: "vertical-align:top", secrets }
                 }
-                label { "Name" }
-            }
-            div { class: "form-floating mb-3",
-                textarea {
-                    class: "form-control",
-                    style: "min-height:500px;font-family: monospace;",
-                    oninput: move |cx| {
-                        edit_state.modify(|itm| itm.set_yaml(cx.value.to_string()));
-                    },
-                    value: "{edit_state.get_yaml()}"
-                }
-                label { "Yaml" }
             }
         }
         div { class: "modal-footer",
@@ -99,6 +159,35 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
             }
         }
     }
+}
+
+pub fn load_secret<'s>(
+    cx: &'s Scope<'s, EditTemplateProps>,
+    secret_name: &str,
+    secrets: &UseState<HashMap<String, Option<SecretModel>>>,
+) {
+    let secret_name = secret_name.to_string();
+    let secrets = secrets.to_owned();
+
+    cx.spawn(async move {
+        let secret_model = crate::grpc_client::SecretsGrpcClient::get_secret(secret_name.clone())
+            .await
+            .unwrap();
+
+        if secret_model.name.len() > 0 {
+            secrets.modify(|itm| {
+                let mut secrets = itm.clone();
+                secrets.insert(secret_name, Some(secret_model));
+                secrets
+            });
+        } else {
+            secrets.modify(|itm| {
+                let mut secrets = itm.clone();
+                secrets.insert(secret_name, None);
+                secrets
+            });
+        }
+    });
 }
 
 pub fn load_template<'s>(
