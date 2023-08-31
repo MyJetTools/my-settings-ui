@@ -29,3 +29,7 @@ pub fn cancel_button_icon(cx: Scope) -> Element {
 pub fn search_icon(cx: Scope) -> Element {
     cx.render(rsx! { Icon { width: 16, height: 16, fill: "gray", icon: BsSearch } })
 }
+
+pub fn warning_icon(cx: Scope) -> Element {
+    cx.render(rsx! { Icon { width: 16, height: 16, fill: "orange", icon: BsShieldExclamation } })
+}

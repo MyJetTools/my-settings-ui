@@ -53,8 +53,17 @@ pub fn templates_list(cx: Scope) -> Element {
                     None
                 };
 
+                let alert = if itm.has_missing_placeholders{
+                    Some(rsx!{
+                        div { warning_icon {} }
+                    })
+                }else{
+                    None
+                };
+
                 rsx! {
                     tr { style: "border-top: 1px solid lightgray",
+                        td { alert }
                         td { "{itm.env}" }
                         td { "{itm.name}", last_edited }
                         td { "{itm.created}" }
@@ -124,6 +133,7 @@ pub fn templates_list(cx: Scope) -> Element {
             render! {
                 table { class: "table table-striped", style: "text-align: left;",
                     tr {
+                        th {}
                         th { "Env" }
                         th {
                             table {

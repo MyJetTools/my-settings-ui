@@ -42,6 +42,7 @@ message TemplateListItem{
    string Created = 3;
    string Updated = 4;
    int64 LastRequests = 5;
+   bool HasMissingPlaceholders = 6;
 }
 
 service Templates {
