@@ -57,7 +57,7 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
             let (secret_value, secret_level) = match secrets_state.get().get(secret_name) {
                 Some(value) => match value {
                     Some(value) => (
-                        rsx! { div { style:"font-size:12px", "{value.value}" } },
+                        rsx! { div { style:"font-size:12px; width:300px; height:32px; overflows-y:auto", "{value.value}" } },
                         rsx! {div{ style:"font-size:12px", "{value.level}"}},
                     ),
                     None => (
