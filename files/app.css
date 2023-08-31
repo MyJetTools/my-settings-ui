@@ -95,7 +95,7 @@ body {
 
 
 .modal-dialog {
-    width: 80%;
+    width: 90%;
     background-color: white;
     padding: 10px;
     margin-top: 5px;
@@ -129,6 +129,10 @@ body {
 
 .have-no-links {
     background-color: red;
+}
+
+.modal-content {
+    text-align: left;
 }
 
 .modal-content-full-screen {
