@@ -1,4 +1,4 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, rc::Rc, time::Duration};
 
 use dioxus::prelude::*;
 
@@ -203,9 +203,14 @@ pub fn load_template<'s>(
     let state = state.to_owned();
 
     cx.spawn(async move {
-        let yaml = crate::grpc_client::TemplatesGrpcClient::get_template(env, name)
-            .await
-            .unwrap();
+        let yaml = tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(300)).await;
+            crate::grpc_client::TemplatesGrpcClient::get_template(env, name)
+                .await
+                .unwrap()
+        })
+        .await
+        .unwrap();
 
         state.modify(|itm| itm.loaded_yaml(yaml));
     });
