@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     states::{DialogState, LastEdited, MainState},
-    views::{dialog::peek_secrets, icons::*},
+    views::{dialog::*, icons::*},
 };
 
 #[derive(Props, PartialEq, Eq)]
@@ -38,6 +38,11 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
                             },
                             "Peek secret"
                         }
+                    }
+                }
+                choose_secret {
+                    on_selected: move |selected: String| {
+                        edit_state.modify(|itm| itm.add_secret_to_yaml(selected));
                     }
                 }
             }
@@ -309,6 +314,17 @@ impl EditTemplateState {
             edit_mode: self.edit_mode,
             yaml: yaml.clone(),
             loaded: Some(Rc::new(yaml)),
+            copy_from: self.copy_from.clone(),
+        }
+    }
+
+    pub fn add_secret_to_yaml(&self, secret_name: String) -> Self {
+        Self {
+            env: self.env.to_string(),
+            name: self.name.to_string(),
+            edit_mode: self.edit_mode,
+            yaml: format!("{}${{{}}}", self.yaml, secret_name),
+            loaded: self.loaded.clone(),
             copy_from: self.copy_from.clone(),
         }
     }
