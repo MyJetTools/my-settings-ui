@@ -17,10 +17,15 @@ pub fn index(req: &Request, res: &mut Response) {
         None => "localhost:9001",
     };
 
-    let scheme = if host.starts_with("localhost") || host.starts_with("127.0.0") {
-        "ws"
-    } else {
-        "wss"
+    let scheme = match req.headers().get("X-Forwarded-Proto") {
+        Some(value) => value.to_str().unwrap(),
+        None => {
+            if host.starts_with("localhost") || host.starts_with("127.0.0") {
+                "ws"
+            } else {
+                "wss"
+            }
+        }
     };
 
     let ws = format!("{}://{}", scheme, host);
