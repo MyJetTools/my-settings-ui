@@ -4,22 +4,21 @@ use dioxus::prelude::*;
 use rust_extensions::date_time::DateTimeAsMicroseconds;
 
 use super::icons::*;
-use crate::states::{DialogState, DialogType, LastEdited, MainState};
+use crate::{
+    states::{DialogState, DialogType, MainState},
+    templates_grpc::TemplateListItem,
+};
 
 pub fn templates_list(cx: Scope) -> Element {
     let main_state = use_shared_state::<MainState>(cx).unwrap();
 
     let filter = use_state(cx, || "".to_string());
 
-    let last_edited = use_shared_state::<LastEdited>(cx)
-        .unwrap()
-        .read()
-        .get_template();
-
     let value_to_filter = filter.get().to_lowercase();
 
     match main_state.read().unwrap_as_templates() {
         Some(templates) => {
+            let last_edited = get_last_edited(templates);
             let templates = templates.iter().filter(|itm|{
                 if value_to_filter.len() == 0 {
                     return true;
@@ -213,4 +212,23 @@ fn load_templates(cx: &Scope, main_state: &UseSharedState<MainState>) {
 
         main_state.write().set_templates(Some(response));
     });
+}
+
+fn get_last_edited(templates: &Vec<TemplateListItem>) -> (String, String) {
+    let mut max = 0;
+
+    let mut env = "".to_string();
+    let mut name = "".to_string();
+
+    for template in templates {
+        if let Some(updated) = DateTimeAsMicroseconds::from_str(&template.updated) {
+            if updated.unix_microseconds > max {
+                max = updated.unix_microseconds;
+                env = template.env.clone();
+                name = template.name.clone();
+            }
+        }
+    }
+
+    (env, name)
 }

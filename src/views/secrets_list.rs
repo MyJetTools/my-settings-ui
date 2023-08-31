@@ -1,10 +1,11 @@
 use std::rc::Rc;
 
 use dioxus::prelude::*;
+use rust_extensions::date_time::DateTimeAsMicroseconds;
 
 use crate::{
-    states::{DialogState, DialogType, MainState, LastEdited},
-    views::icons::*,
+    states::{DialogState, DialogType, MainState},
+    views::icons::*, secrets_grpc::SecretListItem,
 };
 
 pub fn secrets_list(cx: Scope) -> Element {
@@ -14,11 +15,11 @@ pub fn secrets_list(cx: Scope) -> Element {
 
     let value_to_filter = filter_secret.get().to_lowercase();
 
-    let last_edited = use_shared_state::<LastEdited>(cx).unwrap().read().get_secret();
 
     match main_state.read().unwrap_as_secrets() {
-        Some(templates) => {
-            let templates = templates.iter().
+        Some(secrets) => {
+            let last_edited = get_last_edited(&secrets);
+            let secrets = secrets.iter().
             filter(|itm|{
                 if value_to_filter.len() == 0 {
                     return true;
@@ -52,7 +53,7 @@ pub fn secrets_list(cx: Scope) -> Element {
                 let secret_amount = itm.used_by_secrets;
                 let templates_amount = itm.used_by_templates;
 
-                let last_edited = if &itm.name == last_edited.as_ref() {
+                let last_edited = if itm.name.as_str() == last_edited.as_str() {
                     Some(rsx!(
                         span { id: "last-edited-badge", class: "badge badge-success ", "Last edited" }
                         script { r#"scroll_to('last-edited-badge')"# }
@@ -192,7 +193,7 @@ pub fn secrets_list(cx: Scope) -> Element {
                         }
                     }
 
-                    templates.into_iter()
+                    secrets.into_iter()
                 }
             }
         }
@@ -215,4 +216,28 @@ fn load_templates(cx: &Scope, main_state: &UseSharedState<MainState>) {
 
         main_state.write().set_secrets(Some(response));
     });
+}
+
+
+
+fn get_last_edited(secrets: &Vec<SecretListItem>)->String{
+
+    let mut max = 0;
+
+    let mut value = "".to_string();
+
+    for secret in secrets{
+
+        if let Some(updated) = DateTimeAsMicroseconds::from_str(&secret.updated){
+
+            if updated.unix_microseconds>max{
+                max = updated.unix_microseconds;
+                value = secret.name.clone();
+            }
+
+        }
+    }
+
+    value
+
 }

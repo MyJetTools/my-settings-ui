@@ -3,7 +3,7 @@ use std::{rc::Rc, time::Duration};
 use dioxus::prelude::*;
 
 use crate::{
-    states::{DialogState, LastEdited, MainState},
+    states::{DialogState, MainState},
     views::{dialog::*, icons::*},
 };
 
@@ -191,14 +191,11 @@ pub fn save_template<'s>(
     let dialog_state: UseSharedState<DialogState> =
         use_shared_state::<DialogState>(cx).unwrap().to_owned();
 
-    let last_edited: UseSharedState<LastEdited> = use_shared_state(cx).unwrap().to_owned();
-
     cx.spawn(async move {
         crate::grpc_client::TemplatesGrpcClient::save_template(env.clone(), name.clone(), yaml)
             .await
             .unwrap();
 
-        last_edited.write().set_last_template_edited(env, name);
         dialog_state.write().hide_dialog();
         main_state.write().set_templates(None);
     });

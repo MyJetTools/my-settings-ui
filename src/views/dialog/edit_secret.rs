@@ -3,7 +3,7 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 use crate::{
-    states::{DialogState, LastEdited, MainState},
+    states::{DialogState, MainState},
     views::icons::*,
 };
 
@@ -227,14 +227,11 @@ fn save_secret<'s>(
     let dialog_state: UseSharedState<DialogState> =
         use_shared_state::<DialogState>(cx).unwrap().to_owned();
 
-    let last_edited: UseSharedState<LastEdited> = use_shared_state(cx).unwrap().to_owned();
-
     cx.spawn(async move {
         crate::grpc_client::SecretsGrpcClient::save_secret(name.clone(), value, level)
             .await
             .unwrap();
 
-        last_edited.write().set_last_secret_edited(name);
         dialog_state.write().hide_dialog();
         main_state.write().set_secrets(None);
     })
