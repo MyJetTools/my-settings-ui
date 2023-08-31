@@ -22,6 +22,46 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
         )
     });
 
+    let tabs = use_state(cx, || EditTemplateTab::ChooseSecret);
+
+    let tabs_content = match tabs.get() {
+        EditTemplateTab::ChooseSecret => {
+            rsx! {
+                ul { class: "nav nav-tabs",
+                    li { class: "nav-item", a { class: "nav-link active", "Choose secret" } }
+                    li { class: "nav-item",
+                        a {
+                            class: "nav-link",
+                            style: "cursor:pointer",
+                            onclick: move |_| {
+                                tabs.set(EditTemplateTab::PeekSecret);
+                            },
+                            "Peek secret"
+                        }
+                    }
+                }
+            }
+        }
+        EditTemplateTab::PeekSecret => {
+            rsx! {
+                ul { class: "nav nav-tabs",
+                    li { class: "nav-item",
+                        a {
+                            class: "nav-link",
+                            style: "cursor:pointer",
+                            onclick: move |_| {
+                                tabs.set(EditTemplateTab::ChooseSecret);
+                            },
+                            "Choose secret"
+                        }
+                    }
+                    li { class: "nav-item", a { class: "nav-link  active", "Peek secret" } }
+                }
+                peek_secrets { yaml: edit_state.get_yaml().to_string() }
+            }
+        }
+    };
+
     let (edit_mode, copy_from_model, yaml_loaded, env_name_read_only, save_button_disabled) = {
         let edit_state = edit_state.get();
 
@@ -83,7 +123,7 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
                             label { "Yaml" }
                         }
                     }
-                    td { style: "vertical-align:top", peek_secrets { yaml: edit_state.get_yaml().to_string() } }
+                    td { style: "vertical-align:top", tabs_content }
                 }
             }
         }
@@ -272,4 +312,9 @@ impl EditTemplateState {
             copy_from: self.copy_from.clone(),
         }
     }
+}
+
+pub enum EditTemplateTab {
+    ChooseSecret,
+    PeekSecret,
 }
