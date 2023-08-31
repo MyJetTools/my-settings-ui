@@ -1,11 +1,10 @@
-use std::{collections::HashMap, rc::Rc, time::Duration};
+use std::{rc::Rc, time::Duration};
 
 use dioxus::prelude::*;
 
 use crate::{
-    secrets_grpc::SecretModel,
     states::{DialogState, LastEdited, MainState},
-    views::icons::*,
+    views::{dialog::peek_secrets, icons::*},
 };
 
 #[derive(Props, PartialEq, Eq)]
@@ -22,9 +21,6 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
             cx.props.copy_from_template,
         )
     });
-
-    let secrets_state: &UseState<HashMap<String, Option<SecretModel>>> =
-        use_state(cx, || HashMap::new());
 
     let (edit_mode, copy_from_model, yaml_loaded, env_name_read_only, save_button_disabled) = {
         let edit_state = edit_state.get();
@@ -45,55 +41,6 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
     if let Some(copy_from_model) = copy_from_model {
         load_template(&cx, &copy_from_model.0, &copy_from_model.1, edit_state);
     }
-
-    let mut secrets = Vec::new();
-
-    let yaml = edit_state.get_yaml();
-
-    let secrets = if yaml.len() > 10 {
-        for secret_name in settings_utils::placeholders::get_secret_names(edit_state.get_yaml()) {
-            let secret_name_to_load = secret_name.to_string();
-            let (secret_value, secret_level) = match secrets_state.get().get(secret_name) {
-                Some(value) => match value {
-                    Some(value) => (
-                        rsx! { div { style:"font-size:12px; width:300px; height:32px; overflows-y:auto", "{value.value}" } },
-                        rsx! {div{ style:"font-size:12px", "{value.level}"}},
-                    ),
-                    None => (
-                        rsx! { div { style: "color:red", "Value not found" } },
-                        rsx! {div{}},
-                    ),
-                },
-                None => (
-                    rsx! { div{class:"btn-group", button { class:"btn btn-primary btn-sm", onclick: move|_|{
-                        load_secret(cx, &secret_name_to_load, secrets_state);
-                    }, "Load" } }},
-                    rsx! {div{}},
-                ),
-            };
-
-            secrets.push(rsx! {
-                tr {
-                    td { style: "font-size:12px", "{secret_name}:" }
-                    td { width: "100%", secret_value }
-                    td { width: "30px", secret_level }
-                }
-            });
-        }
-        rsx! {
-            table { class: "table table-striped",
-                tr {
-                    th { "secret" }
-                    th { "value" }
-                    th { "level" }
-                }
-                secrets.into_iter()
-            }
-        }
-        .into()
-    } else {
-        None
-    };
 
     render! {
         div { class: "modal-content",
@@ -136,7 +83,7 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
                             label { "Yaml" }
                         }
                     }
-                    td { style: "vertical-align:top", secrets }
+                    td { style: "vertical-align:top", peek_secrets { yaml: edit_state.get_yaml().to_string() } }
                 }
             }
         }
@@ -162,35 +109,6 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
     }
 }
 
-pub fn load_secret<'s>(
-    cx: &'s Scoped<'s, EditTemplateProps>,
-    secret_name: &str,
-    secrets: &UseState<HashMap<String, Option<SecretModel>>>,
-) {
-    let secret_name = secret_name.to_string();
-    let secrets = secrets.to_owned();
-
-    cx.spawn(async move {
-        let secret_model = crate::grpc_client::SecretsGrpcClient::get_secret(secret_name.clone())
-            .await
-            .unwrap();
-
-        if secret_model.name.len() > 0 {
-            secrets.modify(|itm| {
-                let mut secrets = itm.clone();
-                secrets.insert(secret_name, Some(secret_model));
-                secrets
-            });
-        } else {
-            secrets.modify(|itm| {
-                let mut secrets = itm.clone();
-                secrets.insert(secret_name, None);
-                secrets
-            });
-        }
-    });
-}
-
 pub fn load_template<'s>(
     cx: &'s Scope<'s, EditTemplateProps>,
     env: &str,
@@ -204,7 +122,7 @@ pub fn load_template<'s>(
 
     cx.spawn(async move {
         let yaml = tokio::spawn(async move {
-            tokio::time::sleep(Duration::from_millis(300)).await;
+            tokio::time::sleep(Duration::from_millis(100)).await;
             crate::grpc_client::TemplatesGrpcClient::get_template(env, name)
                 .await
                 .unwrap()
