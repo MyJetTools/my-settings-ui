@@ -50,48 +50,55 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
 
     let mut secret_is_loading = false;
 
-    for secret_name in settings_utils::placeholders::get_secret_names(edit_state.get_yaml()) {
-        let (secret_value, secret_level) = match secrets_state.get().get(secret_name) {
-            Some(value) => match value {
-                Some(value) => (
-                    rsx! { div { style:"font-size:12px", "{value.value}" } },
-                    rsx! {div{ style:"font-size:12px", "{value.level}"}},
-                ),
-                None => (
-                    rsx! { div { style: "color:red", "Value not found" } },
-                    rsx! {div{}},
-                ),
-            },
-            None => {
-                if !secret_is_loading {
-                    load_secret(&cx, secret_name, secrets_state);
-                    secret_is_loading = true;
+    let yaml = edit_state.get_yaml();
+
+    let secrets = if yaml.len() > 10 {
+        for secret_name in settings_utils::placeholders::get_secret_names(edit_state.get_yaml()) {
+            let (secret_value, secret_level) = match secrets_state.get().get(secret_name) {
+                Some(value) => match value {
+                    Some(value) => (
+                        rsx! { div { style:"font-size:12px", "{value.value}" } },
+                        rsx! {div{ style:"font-size:12px", "{value.level}"}},
+                    ),
+                    None => (
+                        rsx! { div { style: "color:red", "Value not found" } },
+                        rsx! {div{}},
+                    ),
+                },
+                None => {
+                    if !secret_is_loading {
+                        load_secret(&cx, secret_name, secrets_state);
+                        secret_is_loading = true;
+                    }
+
+                    (
+                        rsx! { div { style: "color:orange", "Value not loaded" } },
+                        rsx! {div{}},
+                    )
                 }
+            };
 
-                (
-                    rsx! { div { style: "color:orange", "Value not loaded" } },
-                    rsx! {div{}},
-                )
-            }
-        };
-
-        secrets.push(rsx! {
-            tr {
-                td { style: "font-size:12px", "{secret_name}:" }
-                td { width: "100%", secret_value }
-                td { width: "30px", secret_level }
-            }
-        });
-    }
-    let secrets = rsx! {
-        table { class: "table table-striped",
-            tr {
-                th { "secret" }
-                th { "value" }
-                th { "level" }
-            }
-            secrets.into_iter()
+            secrets.push(rsx! {
+                tr {
+                    td { style: "font-size:12px", "{secret_name}:" }
+                    td { width: "100%", secret_value }
+                    td { width: "30px", secret_level }
+                }
+            });
         }
+        rsx! {
+            table { class: "table table-striped",
+                tr {
+                    th { "secret" }
+                    th { "value" }
+                    th { "level" }
+                }
+                secrets.into_iter()
+            }
+        }
+        .into()
+    } else {
+        None
     };
 
     render! {
