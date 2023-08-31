@@ -48,12 +48,11 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
 
     let mut secrets = Vec::new();
 
-    let mut secret_is_loading = false;
-
     let yaml = edit_state.get_yaml();
 
     let secrets = if yaml.len() > 10 {
         for secret_name in settings_utils::placeholders::get_secret_names(edit_state.get_yaml()) {
+            let secret_name_to_load = secret_name.to_string();
             let (secret_value, secret_level) = match secrets_state.get().get(secret_name) {
                 Some(value) => match value {
                     Some(value) => (
@@ -65,17 +64,12 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
                         rsx! {div{}},
                     ),
                 },
-                None => {
-                    if !secret_is_loading {
-                        load_secret(&cx, secret_name, secrets_state);
-                        secret_is_loading = true;
-                    }
-
-                    (
-                        rsx! { div { style: "color:orange", "Value not loaded" } },
-                        rsx! {div{}},
-                    )
-                }
+                None => (
+                    rsx! { div{class:"btn-group", button { class:"btn btn-primary btn-sm", onclick: move|_|{
+                        load_secret(cx, &secret_name_to_load, secrets_state);
+                    }, "Load" } }},
+                    rsx! {div{}},
+                ),
             };
 
             secrets.push(rsx! {
@@ -169,7 +163,7 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
 }
 
 pub fn load_secret<'s>(
-    cx: &'s Scope<'s, EditTemplateProps>,
+    cx: &'s Scoped<'s, EditTemplateProps>,
     secret_name: &str,
     secrets: &UseState<HashMap<String, Option<SecretModel>>>,
 ) {
