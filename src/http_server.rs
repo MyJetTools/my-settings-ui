@@ -18,7 +18,13 @@ pub fn index(req: &Request, res: &mut Response) {
     };
 
     let scheme = match req.headers().get("X-Forwarded-Proto") {
-        Some(value) => value.to_str().unwrap(),
+        Some(value) => {
+            if value.to_str().unwrap().starts_with("https") {
+                "wss"
+            } else {
+                "ws"
+            }
+        }
         None => {
             if host.starts_with("localhost") || host.starts_with("127.0.0") {
                 "ws"
