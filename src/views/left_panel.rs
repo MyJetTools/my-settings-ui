@@ -33,8 +33,6 @@ pub fn left_panel(cx: Scope) -> Element {
             .await
             .unwrap();
 
-            println!("env_name: {}", env_name);
-
             env_name_own.set(env_name);
         });
     }
