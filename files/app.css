@@ -90,6 +90,7 @@ body {
     height: var(--total-height);
     background-color: rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(10px);
+    z-index: 100;
 }
 
 
