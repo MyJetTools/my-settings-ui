@@ -84,7 +84,9 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
     }
 
     if let Some(copy_from_model) = copy_from_model {
-        load_template(&cx, &copy_from_model.0, &copy_from_model.1, edit_state);
+        if !yaml_loaded {
+            load_template(&cx, &copy_from_model.0, &copy_from_model.1, edit_state);
+        }
     }
 
     render! {
