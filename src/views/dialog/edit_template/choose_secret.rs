@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::secrets_grpc::SecretListItem;
+use crate::{secrets_grpc::SecretListItem, views::dialog::select_secret};
 
 #[derive(Props)]
 pub struct ChooseSecretProps<'s> {
@@ -100,7 +100,15 @@ pub fn choose_secret<'s>(cx: Scope<'s, ChooseSecretProps<'s>>) -> Element {
                     label { "Secret level" }
                 }
 
-                btn
+                btn,
+
+                hr {}
+                h4 { "Copy value from other secret" }
+                select_secret {
+                    on_selected: move |value: String| {
+                        copy_secret_value(cx, &value, secret_value);
+                    }
+                }
             };
 
             vec![result]
@@ -192,6 +200,25 @@ fn add_secret<'s>(
         mode.set(ChooseSecretMode::Select);
         secrets.set(None);
     })
+}
+
+fn copy_secret_value<'s>(
+    cx: &Scoped<'s, ChooseSecretProps<'s>>,
+    secret_name: &str,
+    secret_value: &UseState<String>,
+) {
+    let secret_name = secret_name.to_string();
+    let secret_value = secret_value.to_owned();
+
+    cx.spawn(async move {
+        let secret_model = crate::grpc_client::SecretsGrpcClient::get_secret(secret_name.clone())
+            .await
+            .unwrap();
+
+        if secret_model.name.len() > 0 {
+            secret_value.set(secret_model.value);
+        }
+    });
 }
 
 pub enum ChooseSecretMode {
