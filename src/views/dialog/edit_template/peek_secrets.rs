@@ -57,13 +57,15 @@ pub fn peek_secrets<'s>(cx: Scope<'s, PeekSecretsProps>) -> Element {
     }
 
     render! {
-        table { class: "table table-striped",
-            tr {
-                th { "secret" }
-                th { "value" }
-                th { "level" }
+        div { style: "height:70vh; overflow-y: auto;",
+            table { class: "table table-striped",
+                tr {
+                    th { "secret" }
+                    th { "value" }
+                    th { "level" }
+                }
+                secrets.into_iter()
             }
-            secrets.into_iter()
         }
     }
 }

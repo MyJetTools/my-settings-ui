@@ -151,8 +151,7 @@ pub fn choose_secret<'s>(cx: Scope<'s, ChooseSecretProps<'s>>) -> Element {
             }
             btn
         }
-
-        content.into_iter()
+        div { style: "height:70vh; overflow-y: auto;", content.into_iter() }
     }
 }
 
