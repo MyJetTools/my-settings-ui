@@ -34,15 +34,19 @@ pub fn secrets_list(cx: Scope) -> Element {
             let mut updated_title = vec![rsx!{"Updated"}];
 
             match order_by.get(){
-                OrderBy::Name => for secret in secrets{
+                OrderBy::Name => {
+                    for secret in secrets{
                     sorted.insert(&secret.name, secret);
-                    name_title.push(rsx!{ table_up_icon {} })
-                },
+                  
+                };  
+                name_title.push(rsx!{ table_up_icon {} });
+            },
          
-                OrderBy::Updated => for secret in secrets{
+                OrderBy::Updated => {for secret in secrets{
                     sorted.insert(&secret.name, secret);
-                    updated_title.push(rsx!{ table_up_icon {} })
-                },
+                    
+                }updated_title.push(rsx!{ table_up_icon {} });
+            },
    
             }
 
