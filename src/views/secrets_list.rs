@@ -190,6 +190,7 @@ pub fn secrets_list(cx: Scope) -> Element {
                             table {
                                 tr {
                                     td {
+                                        style: "cursor:pointer",
                                         onclick: move |_| {
                                             order_by.set(OrderBy::Name);
                                         },
@@ -212,6 +213,7 @@ pub fn secrets_list(cx: Scope) -> Element {
                         th { "Level" }
                         th { "Created" }
                         th {
+                            style: "cursor:pointer",
                             onclick: move |_| {
                                 order_by.set(OrderBy::Updated);
                             },
