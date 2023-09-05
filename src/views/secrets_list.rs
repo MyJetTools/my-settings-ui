@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{rc::Rc, collections::BTreeMap};
 
 use dioxus::prelude::*;
 use rust_extensions::date_time::DateTimeAsMicroseconds;
@@ -8,6 +8,11 @@ use crate::{
     views::icons::*, secrets_grpc::SecretListItem,
 };
 
+pub enum OrderBy{
+    Name,
+    Updated,
+}
+
 pub fn secrets_list(cx: Scope) -> Element {
     let main_state = use_shared_state::<MainState>(cx).unwrap();
 
@@ -16,9 +21,32 @@ pub fn secrets_list(cx: Scope) -> Element {
     let value_to_filter = filter_secret.get().to_lowercase();
 
 
+    let order_by = use_state(cx, || OrderBy::Name);
+
+
     match main_state.read().unwrap_as_secrets() {
         Some(secrets) => {
             let last_edited = get_last_edited(&secrets);
+
+            let mut sorted = BTreeMap::new();
+
+            let mut name_title = vec![rsx!{"Name"}];
+            let mut updated_title = vec![rsx!{"Updated"}];
+
+            match order_by.get(){
+                OrderBy::Name => for secret in secrets{
+                    sorted.insert(&secret.name, secret);
+                    name_title.push(rsx!{ table_up_icon {} })
+                },
+         
+                OrderBy::Updated => for secret in secrets{
+                    sorted.insert(&secret.name, secret);
+                    updated_title.push(rsx!{ table_up_icon {} })
+                },
+   
+            }
+
+
             let secrets = secrets.iter().
             filter(|itm|{
                 if value_to_filter.len() == 0 {
@@ -161,7 +189,12 @@ pub fn secrets_list(cx: Scope) -> Element {
                         th { style: "width:100%",
                             table {
                                 tr {
-                                    td { "Name" }
+                                    td {
+                                        onclick: move |_| {
+                                            order_by.set(OrderBy::Name);
+                                        },
+                                        name_title.into_iter()
+                                    }
                                     td { style: "width:100%",
                                         div { class: "input-group",
                                             span { class: "input-group-text", search_icon {} }
@@ -178,7 +211,12 @@ pub fn secrets_list(cx: Scope) -> Element {
                         }
                         th { "Level" }
                         th { "Created" }
-                        th { "Updated" }
+                        th {
+                            onclick: move |_| {
+                                order_by.set(OrderBy::Updated);
+                            },
+                            updated_title.into_iter()
+                        }
                         th {
                             div {
                                 button {

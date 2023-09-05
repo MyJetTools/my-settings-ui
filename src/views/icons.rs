@@ -37,3 +37,7 @@ pub fn copy_from_icon(cx: Scope) -> Element {
 pub fn warning_icon(cx: Scope) -> Element {
     cx.render(rsx! { Icon { width: 16, height: 16, fill: "orange", icon: BsShieldExclamation } })
 }
+
+pub fn table_up_icon(cx: Scope) -> Element {
+    cx.render(rsx! { Icon { width: 16, height: 16, icon: BsArrowUpShort } })
+}
