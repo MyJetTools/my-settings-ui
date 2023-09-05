@@ -43,7 +43,7 @@ pub fn secrets_list(cx: Scope) -> Element {
             },
          
                 OrderBy::Updated => {for secret in secrets{
-                    sorted.insert(&secret.name, secret);
+                    sorted.insert(&secret.updated, secret);
                     
                 }updated_title.push(rsx!{ table_up_icon {} });
             },
