@@ -43,7 +43,8 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-            target/            
+            target/
+            libs/
           key: ubuntu-22.04-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ubuntu-22.04-cargo-
               
