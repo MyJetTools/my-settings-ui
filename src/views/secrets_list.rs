@@ -47,7 +47,7 @@ pub fn secrets_list(cx: Scope) -> Element {
             }
 
 
-            let secrets = secrets.iter().
+            let secrets = sorted.values().
             filter(|itm|{
                 if value_to_filter.len() == 0 {
                     return true;
