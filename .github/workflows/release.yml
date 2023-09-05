@@ -11,13 +11,13 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
 
-      # - name: Install dependencies
-      #   run: sudo apt-get update && sudo apt-get install -y libssl-dev          
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev          
 
       - name: Get the version
         id: get_version
@@ -29,24 +29,22 @@ jobs:
       - name: Install Protoc
         uses: arduino/setup-protoc@v1      
 
-      - name: Install
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: build-essential libglib2.0-dev pkg-config libssl-dev libgtk-3-dev javascriptcoregtk-4.1 libsoup-3.0 webkit2gtk-4.1
+      - run: openssl version
 
-      - name: Set up cargo cache
-        uses: actions/cache@v3
-        continue-on-error: false
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-            libs/
-          key: ubuntu-22.04-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ubuntu-22.04-cargo-
+      - run: echo $LD_LIBRARY_PATH
+
+      - run: sudo apt install build-essential -y
+      - run: sudo apt install libglib2.0-dev -y
+      - run: sudo apt install pkg-config libssl-dev -y
+      - run: sudo apt install libgtk-3-dev -y
+
+      - run: sudo apt upgrade -y
+
+      - run: sudo apt update -y
+
+      - run: sudo apt-get install javascriptcoregtk-4.1 libsoup-3.0 webkit2gtk-4.1 -y
+
+
               
       - run: cargo build --release
 
