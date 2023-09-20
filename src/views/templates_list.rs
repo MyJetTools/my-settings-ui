@@ -67,6 +67,7 @@ pub fn templates_list(cx: Scope) -> Element {
                     tr { style: "border-top: 1px solid lightgray",
                         td { alert }
                         td { "{itm.env}" }
+                        td { "/" }
                         td { "{itm.name}", last_edited }
                         td { "{itm.created}" }
                         td { "{itm.updated}" }
@@ -154,6 +155,7 @@ pub fn templates_list(cx: Scope) -> Element {
                     tr {
                         th {}
                         th { "Env" }
+                        th {}
                         th {
                             table {
                                 tr {
