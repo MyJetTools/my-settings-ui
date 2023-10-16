@@ -24,9 +24,9 @@ dioxus-free-icons = { path = "./libs/icon-packages/lib", features = [
     "ionicons",
 ] }
 
-my-grpc-extensions = { tag = "0.4.0", git = "https://github.com/MyJetTools/my-grpc-extensions.git" }
-my-grpc-client-macros = { tag = "0.1.0", git = "https://github.com/MyJetTools/my-grpc-client-macros.git" }
-my-telemetry = { tag = "0.3.0", git = "https://github.com/MyJetTools/my-telemetry.git" }
+my-grpc-extensions = { tag = "0.5.0", git = "https://github.com/MyJetTools/my-grpc-extensions.git", features = [
+    "grpc-client",
+] }
 
 
 settings-utils = { tag = "0.1.0", git = "https://github.com/MyJetTools/settings-utils.git" }

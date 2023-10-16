@@ -1,8 +1,6 @@
-use my_telemetry::MyTelemetryContext;
-
 use crate::APP_CTX;
-
-#[my_grpc_client_macros::generate_grpc_client(
+use my_grpc_extensions::client::*;
+#[generate_grpc_client(
     proto_file: "./proto/SecretsService.proto",
     crate_ns: "crate::secrets_grpc",
     retries: 3,
@@ -10,18 +8,14 @@ use crate::APP_CTX;
     ping_timeout_sec: 1,
     ping_interval_sec: 3,
 )]
-pub struct SecretsGrpcClient {
-    channel: my_grpc_extensions::GrpcChannel<TGrpcService>,
-}
+pub struct SecretsGrpcClient;
 
 impl SecretsGrpcClient {
     pub async fn get_secret(name: String) -> Result<SecretModel, String> {
         let result = tokio::spawn(async move {
             let grpc_client = APP_CTX.get_secrets_grpc_client().await;
 
-            let result = grpc_client
-                .get(GetSecretRequest { name }, &MyTelemetryContext::new())
-                .await;
+            let result = grpc_client.get(GetSecretRequest { name }).await;
 
             match result {
                 Ok(result) => Ok(result),
@@ -40,7 +34,7 @@ impl SecretsGrpcClient {
         let result = tokio::spawn(async move {
             let grpc_client = APP_CTX.get_secrets_grpc_client().await;
 
-            let result = grpc_client.get_all((), &MyTelemetryContext::new()).await;
+            let result = grpc_client.get_all(()).await;
 
             match result {
                 Ok(result) => match result {
@@ -63,12 +57,9 @@ impl SecretsGrpcClient {
             let grpc_client = APP_CTX.get_secrets_grpc_client().await;
 
             let result = grpc_client
-                .save(
-                    SaveSecretRequest {
-                        model: Some(SecretModel { name, value, level }),
-                    },
-                    &MyTelemetryContext::new(),
-                )
+                .save(SaveSecretRequest {
+                    model: Some(SecretModel { name, value, level }),
+                })
                 .await;
 
             match result {
@@ -88,9 +79,7 @@ impl SecretsGrpcClient {
         let result = tokio::spawn(async move {
             let grpc_client = APP_CTX.get_secrets_grpc_client().await;
 
-            let result = grpc_client
-                .delete(DeleteSecretRequest { name }, &MyTelemetryContext::new())
-                .await;
+            let result = grpc_client.delete(DeleteSecretRequest { name }).await;
 
             match result {
                 Ok(result) => Ok(result),
@@ -110,10 +99,7 @@ impl SecretsGrpcClient {
             let grpc_client = APP_CTX.get_secrets_grpc_client().await;
 
             let result = grpc_client
-                .get_templates_usage(
-                    GetTemplatesUsageRequest { name },
-                    &MyTelemetryContext::new(),
-                )
+                .get_templates_usage(GetTemplatesUsageRequest { name })
                 .await;
 
             match result {
@@ -134,7 +120,7 @@ impl SecretsGrpcClient {
             let grpc_client = APP_CTX.get_secrets_grpc_client().await;
 
             let result = grpc_client
-                .get_secrets_usage(GetSecretsUsageRequest { name }, &MyTelemetryContext::new())
+                .get_secrets_usage(GetSecretsUsageRequest { name })
                 .await;
 
             match result {

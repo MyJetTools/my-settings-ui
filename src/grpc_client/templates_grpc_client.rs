@@ -1,8 +1,7 @@
-use my_telemetry::MyTelemetryContext;
-
 use crate::APP_CTX;
+use my_grpc_extensions::client::*;
 
-#[my_grpc_client_macros::generate_grpc_client(
+#[generate_grpc_client(
     proto_file: "./proto/TemplatesService.proto",
     crate_ns: "crate::templates_grpc",
     retries: 3,
@@ -10,18 +9,14 @@ use crate::APP_CTX;
     ping_timeout_sec: 1,
     ping_interval_sec: 3,
 )]
-pub struct TemplatesGrpcClient {
-    channel: my_grpc_extensions::GrpcChannel<TGrpcService>,
-}
+pub struct TemplatesGrpcClient;
 
 impl TemplatesGrpcClient {
     pub async fn get_template(env: String, name: String) -> Result<String, String> {
         let result = tokio::spawn(async move {
             let grpc_client = APP_CTX.get_templates_grpc_client().await;
 
-            let result = grpc_client
-                .get(GetTemplateRequest { env, name }, &MyTelemetryContext::new())
-                .await;
+            let result = grpc_client.get(GetTemplateRequest { env, name }).await;
 
             match result {
                 Ok(result) => Ok(result.yaml),
@@ -40,7 +35,7 @@ impl TemplatesGrpcClient {
         let result = tokio::spawn(async move {
             let grpc_client = APP_CTX.get_templates_grpc_client().await;
 
-            let result = grpc_client.get_all((), &MyTelemetryContext::new()).await;
+            let result = grpc_client.get_all(()).await;
 
             match result {
                 Ok(result) => match result {
@@ -63,10 +58,7 @@ impl TemplatesGrpcClient {
             let grpc_client = APP_CTX.get_templates_grpc_client().await;
 
             let result = grpc_client
-                .save(
-                    SaveTemplateRequest { env, name, yaml },
-                    &MyTelemetryContext::new(),
-                )
+                .save(SaveTemplateRequest { env, name, yaml })
                 .await;
 
             match result {
@@ -87,10 +79,7 @@ impl TemplatesGrpcClient {
             let grpc_client = APP_CTX.get_templates_grpc_client().await;
 
             let result = grpc_client
-                .delete(
-                    DeleteTemplateRequest { env, name },
-                    &MyTelemetryContext::new(),
-                )
+                .delete(DeleteTemplateRequest { env, name })
                 .await;
 
             match result {
@@ -110,7 +99,7 @@ impl TemplatesGrpcClient {
             let grpc_client = APP_CTX.get_templates_grpc_client().await;
 
             let result = grpc_client
-                .compile_yaml(CompileYamlRequest { env, name }, &MyTelemetryContext::new())
+                .compile_yaml(CompileYamlRequest { env, name })
                 .await;
 
             match result {

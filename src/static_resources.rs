@@ -28,7 +28,7 @@ pub fn get_html(host: &str) -> String {
         r#"
             <!DOCTYPE html>
             <html>
-                <head> <title>CFD web terminal</title> {header_content} </head>
+                <head> <title>Settings</title> {header_content} </head>
                 <body style:"--show-panel-offset:0"> <div id="main"></div> </body>
                 {glue}
             </html>
