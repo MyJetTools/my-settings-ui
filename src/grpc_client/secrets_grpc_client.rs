@@ -10,9 +10,7 @@ use crate::APP_CTX;
     ping_timeout_sec: 1,
     ping_interval_sec: 3,
 )]
-pub struct SecretsGrpcClient {
-    channel: my_grpc_extensions::GrpcChannel<TGrpcService>,
-}
+pub struct SecretsGrpcClient;
 
 impl SecretsGrpcClient {
     pub async fn get_secret(name: String) -> Result<SecretModel, String> {
