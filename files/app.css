@@ -73,7 +73,12 @@ body {
     font-size: 16px;
 }
 
-.menu-active {
+.menu-item a {
+    text-decoration: none;
+    color: gray;
+}
+
+.menu-active a {
     color: blue;
     text-shadow: 1px 1px 1px lightgray;
 }

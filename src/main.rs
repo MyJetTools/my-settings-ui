@@ -46,11 +46,21 @@ fn main() {
 }
 
 fn Home(cx: Scope) -> Element {
+    use_shared_state_provider(cx, || MainState::Nothing);
+    render! { my_layout {} }
+}
+
+fn Templates(cx: Scope) -> Element {
+    use_shared_state_provider(cx, || MainState::Templates(None));
+    render! { my_layout {} }
+}
+
+fn Secrets(cx: Scope) -> Element {
+    use_shared_state_provider(cx, || MainState::Secrets(None));
     render! { my_layout {} }
 }
 
 fn my_layout(cx: Scope) -> Element {
-    use_shared_state_provider(cx, || MainState::Nothing);
     use_shared_state_provider(cx, || DialogState::Hidden);
 
     render! {
