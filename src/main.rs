@@ -1,58 +1,55 @@
-use std::sync::Arc;
+#![allow(non_snake_case)]
 
+#[cfg(feature = "ssr")]
 use app_ctx::AppCtx;
 use dioxus::prelude::*;
-use dioxus_liveview::LiveViewPool;
-use salvo::prelude::*;
-
+use dioxus_fullstack::prelude::*;
+use router::AppRoute;
+#[cfg(feature = "ssr")]
 mod app_ctx;
+#[cfg(feature = "ssr")]
 mod grpc_client;
-mod http_server;
+
+mod router;
+#[cfg(feature = "ssr")]
 mod settings;
 mod states;
-mod static_resources;
+mod utils;
 mod views;
-
-use settings::SettingsReader;
 use views::*;
 
 use crate::states::*;
-
+#[cfg(feature = "ssr")]
 lazy_static::lazy_static! {
     pub static ref APP_CTX: AppCtx = {
         AppCtx::new()
     };
 }
 
-#[allow(non_snake_case)]
+#[cfg(feature = "ssr")]
 pub mod templates_grpc {
     tonic::include_proto!("templates");
 }
 
-#[allow(non_snake_case)]
+#[cfg(feature = "ssr")]
 pub mod secrets_grpc {
     tonic::include_proto!("secrets");
 }
 
-#[tokio::main]
-async fn main() {
-    let settings_reader = crate::settings::SettingsReader::new(".my-settings-ui").await;
-    let settings_reader: Arc<SettingsReader> = Arc::new(settings_reader);
-    APP_CTX.inject_settings(settings_reader).await;
+fn main() {
+    let config = LaunchBuilder::<FullstackRouterConfig<AppRoute>>::router();
 
-    let acceptor = TcpListener::new("0.0.0.0:9001").bind().await;
-    let view = LiveViewPool::new();
+    #[cfg(feature = "ssr")]
+    let config = config.addr(std::net::SocketAddr::from(([0, 0, 0, 0], 8080)));
 
-    let router = Router::new()
-        .hoop(affix::inject(Arc::new(view)))
-        .get(http_server::index)
-        .push(Router::with_path("ws").get(http_server::connect))
-        .push(Router::with_path("img/<**path>").get(StaticDir::new("./files/img")));
-
-    Server::new(acceptor).serve(router).await;
+    config.launch();
 }
 
-fn app(cx: Scope) -> Element {
+fn Home(cx: Scope) -> Element {
+    render! { my_layout {} }
+}
+
+fn my_layout(cx: Scope) -> Element {
     use_shared_state_provider(cx, || MainState::Nothing);
     use_shared_state_provider(cx, || DialogState::Hidden);
 

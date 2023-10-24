@@ -1,6 +1,8 @@
-use std::{rc::Rc, time::Duration};
+use std::rc::Rc;
 
 use dioxus::prelude::*;
+use dioxus_fullstack::prelude::*;
+use serde::*;
 
 use crate::{
     states::{DialogState, MainState},
@@ -80,12 +82,25 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
     };
 
     if edit_mode && !yaml_loaded {
-        load_template(&cx, &cx.props.env, &cx.props.name, edit_state);
+        let env = cx.props.env.to_string();
+        let name = cx.props.name.to_string();
+        let edit_state = edit_state.to_owned();
+        cx.spawn(async move {
+            let result = load_template(env, name).await.unwrap();
+            edit_state.modify(|itm| itm.loaded_yaml(result.yaml));
+        });
     }
 
     if let Some(copy_from_model) = copy_from_model {
         if !yaml_loaded {
-            load_template(&cx, &copy_from_model.0, &copy_from_model.1, edit_state);
+            let env = copy_from_model.0.to_string();
+            let name = copy_from_model.1.to_string();
+            let edit_state = edit_state.to_owned();
+
+            cx.spawn(async move {
+                let result = load_template(env, name).await.unwrap();
+                edit_state.modify(|itm| itm.loaded_yaml(result.yaml));
+            });
         }
     }
 
@@ -139,7 +154,20 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
                 button {
                     class: "btn btn-primary",
                     disabled: save_button_disabled,
-                    onclick: move |_| { save_template(&cx, edit_state) },
+                    onclick: move |_| {
+                        let evn = edit_state.get_env().to_string();
+                        let name = edit_state.get_name().to_string();
+                        let yaml = edit_state.get_yaml().to_string();
+                        let main_state = use_shared_state::<MainState>(cx).unwrap().to_owned();
+                        let dialog_state: UseSharedState<DialogState> = use_shared_state::<DialogState>(cx)
+                            .unwrap()
+                            .to_owned();
+                        cx.spawn(async move {
+                            save_template(evn, name, yaml).await.unwrap();
+                            dialog_state.write().hide_dialog();
+                            main_state.write().set_templates(None);
+                        });
+                    },
                     ok_button_icon {}
                     "Save"
                 }
@@ -156,12 +184,19 @@ pub fn edit_template<'s>(cx: Scope<'s, EditTemplateProps>) -> Element {
     }
 }
 
-pub fn load_template<'s>(
-    cx: &'s Scope<'s, EditTemplateProps>,
-    env: &str,
-    name: &str,
-    state: &UseState<EditTemplateState>,
-) {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct LoadedTemplate {
+    pub yaml: String,
+}
+
+#[server]
+pub async fn load_template(env: String, name: String) -> Result<LoadedTemplate, ServerFnError> {
+    let yaml = crate::grpc_client::TemplatesGrpcClient::get_template(env, name)
+        .await
+        .unwrap();
+    Ok(LoadedTemplate { yaml })
+
+    /*
     let env = env.to_string();
     let name = name.to_string();
 
@@ -170,21 +205,25 @@ pub fn load_template<'s>(
     cx.spawn(async move {
         let yaml = tokio::spawn(async move {
             tokio::time::sleep(Duration::from_millis(100)).await;
-            crate::grpc_client::TemplatesGrpcClient::get_template(env, name)
-                .await
-                .unwrap()
+
         })
         .await
         .unwrap();
 
         state.modify(|itm| itm.loaded_yaml(yaml));
     });
+     */
 }
 
-pub fn save_template<'s>(
-    cx: &'s Scope<'s, EditTemplateProps>,
-    state: &UseState<EditTemplateState>,
-) {
+#[server]
+pub async fn save_template(env: String, name: String, yaml: String) -> Result<(), ServerFnError> {
+    crate::grpc_client::TemplatesGrpcClient::save_template(env, name, yaml)
+        .await
+        .unwrap();
+
+    Ok(())
+
+    /*
     let env = state.get_env().to_string();
     let name = state.get_name().to_string();
     let yaml = state.get_yaml().to_string();
@@ -194,13 +233,12 @@ pub fn save_template<'s>(
         use_shared_state::<DialogState>(cx).unwrap().to_owned();
 
     cx.spawn(async move {
-        crate::grpc_client::TemplatesGrpcClient::save_template(env.clone(), name.clone(), yaml)
-            .await
-            .unwrap();
+
 
         dialog_state.write().hide_dialog();
         main_state.write().set_templates(None);
     });
+    */
 }
 
 pub struct EditTemplateState {

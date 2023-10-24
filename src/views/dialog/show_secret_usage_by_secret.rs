@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
-
-use crate::secrets_grpc::SecretUsageModel;
+use dioxus_fullstack::prelude::*;
+use serde::*;
 
 #[derive(Props, PartialEq, Eq)]
 pub struct ShowSecretUsageProps {
@@ -8,9 +8,10 @@ pub struct ShowSecretUsageProps {
 }
 
 pub fn show_secret_usage_by_secret<'s>(cx: Scope<'s, ShowSecretUsageProps>) -> Element {
-    let secret_usage: &UseState<Option<Vec<SecretUsageModel>>> = use_state(cx, || None);
+    let secret_usage_state: &UseState<Option<Vec<SecretUsageBySecretApiModel>>> =
+        use_state(cx, || None);
 
-    match secret_usage.get() {
+    match secret_usage_state.get() {
         Some(values) => {
             let to_render = values.into_iter().map(|itm| {
                 let index = itm.value.find(cx.props.secret.as_str());
@@ -41,25 +42,39 @@ pub fn show_secret_usage_by_secret<'s>(cx: Scope<'s, ShowSecretUsageProps>) -> E
             }
         }
         None => {
-            load_secret_usage(&cx, cx.props.secret.clone(), secret_usage);
+            let secret_id = cx.props.secret.to_string();
+            let secret_usage_state = secret_usage_state.to_owned();
+            cx.spawn(async move {
+                let result = load_secret_usage_by_secret(secret_id).await.unwrap();
+                secret_usage_state.set(Some(result))
+            });
 
             render! { div { class: "modal-content", "Loading..." } }
         }
     }
 }
 
-fn load_secret_usage<'s>(
-    cx: &Scope<'s, ShowSecretUsageProps>,
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SecretUsageBySecretApiModel {
+    pub name: String,
+    pub value: String,
+}
+
+#[server]
+async fn load_secret_usage_by_secret<'s>(
     secret_id: String,
-    state: &UseState<Option<Vec<SecretUsageModel>>>,
-) {
-    let state = state.to_owned();
+) -> Result<Vec<SecretUsageBySecretApiModel>, ServerFnError> {
+    let response = crate::grpc_client::SecretsGrpcClient::get_usage_of_secrets(secret_id)
+        .await
+        .unwrap();
 
-    cx.spawn(async move {
-        let response = crate::grpc_client::SecretsGrpcClient::get_usage_of_secrets(secret_id)
-            .await
-            .unwrap();
+    let result: Vec<_> = response
+        .into_iter()
+        .map(|itm| SecretUsageBySecretApiModel {
+            name: itm.name,
+            value: itm.value,
+        })
+        .collect();
 
-        state.set(Some(response))
-    });
+    Ok(result)
 }

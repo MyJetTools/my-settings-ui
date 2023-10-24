@@ -2,21 +2,38 @@ use std::collections::HashMap;
 
 use dioxus::prelude::*;
 
-use crate::secrets_grpc::{SecretListItem, SecretModel};
+use dioxus_fullstack::prelude::*;
+use serde::*;
+
+use crate::views::{load_secrets, SecretListItemApiModel};
 
 #[derive(Props, PartialEq, Eq)]
 pub struct PeekSecretsProps {
     pub yaml: String,
 }
 pub fn peek_secrets<'s>(cx: Scope<'s, PeekSecretsProps>) -> Element {
-    let available_secrets: &UseState<Option<HashMap<String, SecretListItem>>> =
+    let available_secrets: &UseState<Option<HashMap<String, SecretListItemApiModel>>> =
         use_state(cx, || None);
 
-    load_available_secrets(cx, available_secrets);
+    if available_secrets.get().is_none() {
+        let available_secrets = available_secrets.to_owned();
+        cx.spawn(async move {
+            let as_vec = load_secrets().await.unwrap();
 
-    let mut secrets = Vec::new();
+            let mut values = HashMap::new();
 
-    let secrets_state: &UseState<HashMap<String, SecretModel>> = use_state(cx, || HashMap::new());
+            for itm in as_vec {
+                values.insert(itm.name.clone(), itm);
+            }
+
+            available_secrets.set(Some(values));
+        });
+    }
+
+    let mut secrets_to_render = Vec::new();
+
+    let secrets_values_state: &UseState<HashMap<String, SecretApiModel>> =
+        use_state(cx, || HashMap::new());
 
     if cx.props.yaml.len() > 10 {
         for secret_name in settings_utils::placeholders::get_secret_names(cx.props.yaml.as_str()) {
@@ -29,21 +46,34 @@ pub fn peek_secrets<'s>(cx: Scope<'s, PeekSecretsProps>) -> Element {
                         rsx! {div{}},
                     )
                 } else {
-                    match secrets_state.get().get(secret_name) {
+                    match secrets_values_state.get().get(secret_name) {
                         Some(value) => (
                             rsx! { div { style:"font-size:12px; width:300px; height:32px; overflow-y: auto;", "{value.value}" } },
                             rsx! {div{ style:"font-size:12px", "{value.level}"}},
                         ),
                         None => (
                             rsx! { div{class:"btn-group", button { class:"btn btn-primary btn-sm", onclick: move|_|{
-                                load_secret(cx, &secret_name_to_load, secrets_state);
+
+                                let secret_name = secret_name_to_load.to_string();
+                                let secrets_values_state = secrets_values_state.to_owned();
+                                cx.spawn(async move{
+                                    let secret_model = load_secret(secret_name).await.unwrap();
+                                    if secret_model.name.as_str().len() > 0 {
+                                        secrets_values_state.modify(|itm| {
+                                            let mut new_secrets = itm.clone();
+                                            new_secrets.insert(secret_model.name.clone(), secret_model);
+                                            new_secrets
+                                        });
+                                    }
+                                });
+
                             }, "Load" } }},
                             rsx! {div{}},
                         ),
                     }
                 };
 
-                secrets.push(rsx! {
+                secrets_to_render.push(rsx! {
                     tr { style: "border-top: 1px solid lightgray",
                         td { style: "font-size:12px; border-right: 1px solid lightgray",
                             "{secret_name}:"
@@ -54,6 +84,7 @@ pub fn peek_secrets<'s>(cx: Scope<'s, PeekSecretsProps>) -> Element {
                 });
             }
         }
+  
     }
 
     render! {
@@ -64,54 +95,45 @@ pub fn peek_secrets<'s>(cx: Scope<'s, PeekSecretsProps>) -> Element {
                     th { "value" }
                     th { "level" }
                 }
-                secrets.into_iter()
+                secrets_to_render.into_iter()
             }
         }
     }
 }
 
-pub fn load_available_secrets<'s>(
-    cx: &'s Scoped<'s, PeekSecretsProps>,
-    available_secrets: &UseState<Option<HashMap<String, SecretListItem>>>,
-) {
-    if available_secrets.get().is_some() {
-        return;
-    }
-    let available_secrets = available_secrets.to_owned();
-    cx.spawn(async move {
-        let as_vec = crate::grpc_client::SecretsGrpcClient::get_all_secrets()
-            .await
-            .unwrap();
-
-        let mut values = HashMap::new();
-
-        for itm in as_vec {
-            values.insert(itm.name.clone(), itm);
-        }
-
-        available_secrets.set(Some(values));
-    });
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SecretApiModel {
+    pub name: String,
+    pub value: String,
+    pub level: i32,
 }
 
-pub fn load_secret<'s>(
-    cx: &'s Scoped<'s, PeekSecretsProps>,
-    secret_name: &str,
-    secrets: &UseState<HashMap<String, SecretModel>>,
-) {
+#[server]
+async fn load_secret(secret_name: String) -> Result<SecretApiModel, ServerFnError> {
+    let secret_model = crate::grpc_client::SecretsGrpcClient::get_secret(secret_name.clone())
+        .await
+        .unwrap();
+
+    let result = SecretApiModel {
+        name: secret_name,
+        value: secret_model.value,
+        level: secret_model.level,
+    };
+
+    Ok(result)
+
+    /*
+    if secret_model.name.len() > 0 {
+        secrets.modify(|itm| {
+            let mut secrets = itm.clone();
+            secrets.insert(secret_name, secret_model);
+            secrets
+        });
+    }
+
     let secret_name = secret_name.to_string();
     let secrets = secrets.to_owned();
 
-    cx.spawn(async move {
-        let secret_model = crate::grpc_client::SecretsGrpcClient::get_secret(secret_name.clone())
-            .await
-            .unwrap();
-
-        if secret_model.name.len() > 0 {
-            secrets.modify(|itm| {
-                let mut secrets = itm.clone();
-                secrets.insert(secret_name, secret_model);
-                secrets
-            });
-        }
-    });
+    cx.spawn(async move {});
+     */
 }

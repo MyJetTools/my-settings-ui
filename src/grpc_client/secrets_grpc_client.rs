@@ -13,9 +13,7 @@ pub struct SecretsGrpcClient;
 impl SecretsGrpcClient {
     pub async fn get_secret(name: String) -> Result<SecretModel, String> {
         let result = tokio::spawn(async move {
-            let grpc_client = APP_CTX.get_secrets_grpc_client().await;
-
-            let result = grpc_client.get(GetSecretRequest { name }).await;
+            let result = APP_CTX.secrets_grpc.get(GetSecretRequest { name }).await;
 
             match result {
                 Ok(result) => Ok(result),
@@ -32,9 +30,7 @@ impl SecretsGrpcClient {
 
     pub async fn get_all_secrets() -> Result<Vec<SecretListItem>, String> {
         let result = tokio::spawn(async move {
-            let grpc_client = APP_CTX.get_secrets_grpc_client().await;
-
-            let result = grpc_client.get_all(()).await;
+            let result = APP_CTX.secrets_grpc.get_all(()).await;
 
             match result {
                 Ok(result) => match result {
@@ -53,85 +49,51 @@ impl SecretsGrpcClient {
     }
 
     pub async fn save_secret(name: String, value: String, level: i32) -> Result<(), String> {
-        let result = tokio::spawn(async move {
-            let grpc_client = APP_CTX.get_secrets_grpc_client().await;
-
-            let result = grpc_client
-                .save(SaveSecretRequest {
-                    model: Some(SecretModel { name, value, level }),
-                })
-                .await;
-
-            match result {
-                Ok(result) => Ok(result),
-                Err(err) => Err(format!("{:?}", err)),
-            }
-        })
-        .await;
+        let result = APP_CTX
+            .secrets_grpc
+            .save(SaveSecretRequest {
+                model: Some(SecretModel { name, value, level }),
+            })
+            .await;
 
         match result {
-            Ok(result) => result,
+            Ok(result) => Ok(result),
             Err(err) => Err(format!("{:?}", err)),
         }
     }
 
     pub async fn delete_secret(name: String) -> Result<(), String> {
-        let result = tokio::spawn(async move {
-            let grpc_client = APP_CTX.get_secrets_grpc_client().await;
-
-            let result = grpc_client.delete(DeleteSecretRequest { name }).await;
-
-            match result {
-                Ok(result) => Ok(result),
-                Err(err) => Err(format!("{:?}", err)),
-            }
-        })
-        .await;
+        let result = APP_CTX
+            .secrets_grpc
+            .delete(DeleteSecretRequest { name })
+            .await;
 
         match result {
-            Ok(result) => result,
+            Ok(result) => Ok(result),
             Err(err) => Err(format!("{:?}", err)),
         }
     }
 
     pub async fn get_usage_of_templates(name: String) -> Result<Vec<TemplateUsageModel>, String> {
-        let result = tokio::spawn(async move {
-            let grpc_client = APP_CTX.get_secrets_grpc_client().await;
-
-            let result = grpc_client
-                .get_templates_usage(GetTemplatesUsageRequest { name })
-                .await;
-
-            match result {
-                Ok(result) => Ok(result.templates),
-                Err(err) => Err(format!("{:?}", err)),
-            }
-        })
-        .await;
+        let result = APP_CTX
+            .secrets_grpc
+            .get_templates_usage(GetTemplatesUsageRequest { name })
+            .await;
 
         match result {
-            Ok(result) => result,
+            Ok(result) => Ok(result.templates),
             Err(err) => Err(format!("{:?}", err)),
         }
     }
 
     pub async fn get_usage_of_secrets(name: String) -> Result<Vec<SecretUsageModel>, String> {
-        let result = tokio::spawn(async move {
-            let grpc_client = APP_CTX.get_secrets_grpc_client().await;
-
-            let result = grpc_client
-                .get_secrets_usage(GetSecretsUsageRequest { name })
-                .await;
-
-            match result {
-                Ok(result) => Ok(result.secrets),
-                Err(err) => Err(format!("{:?}", err)),
-            }
-        })
-        .await;
+        let result = APP_CTX
+            .secrets_grpc
+            .get_secrets_usage(GetSecretsUsageRequest { name })
+            .await;
 
         match result {
-            Ok(result) => result,
+            Ok(result) => Ok(result.secrets),
             Err(err) => Err(format!("{:?}", err)),
         }
     }

@@ -12,105 +12,70 @@ use my_grpc_extensions::client::*;
 pub struct TemplatesGrpcClient;
 
 impl TemplatesGrpcClient {
-    pub async fn get_template(env: String, name: String) -> Result<String, String> {
-        let result = tokio::spawn(async move {
-            let grpc_client = APP_CTX.get_templates_grpc_client().await;
-
-            let result = grpc_client.get(GetTemplateRequest { env, name }).await;
-
-            match result {
-                Ok(result) => Ok(result.yaml),
-                Err(err) => Err(format!("{:?}", err)),
-            }
-        })
-        .await;
+    pub async fn get_env_name() -> Result<String, String> {
+        let result = APP_CTX.templates_grpc.get_server_info(()).await;
 
         match result {
-            Ok(result) => result,
+            Ok(result) => Ok(result.env_name),
+            Err(err) => Err(format!("{:?}", err)),
+        }
+    }
+
+    pub async fn get_template(env: String, name: String) -> Result<String, String> {
+        let result = APP_CTX
+            .templates_grpc
+            .get(GetTemplateRequest { env, name })
+            .await;
+
+        match result {
+            Ok(result) => Ok(result.yaml),
             Err(err) => Err(format!("{:?}", err)),
         }
     }
 
     pub async fn get_all_templates() -> Result<Vec<TemplateListItem>, String> {
-        let result = tokio::spawn(async move {
-            let grpc_client = APP_CTX.get_templates_grpc_client().await;
-
-            let result = grpc_client.get_all(()).await;
-
-            match result {
-                Ok(result) => match result {
-                    Some(result) => Ok(result),
-                    None => Ok(vec![]),
-                },
-                Err(err) => Err(format!("{:?}", err)),
-            }
-        })
-        .await;
+        let result = APP_CTX.templates_grpc.get_all(()).await;
 
         match result {
-            Ok(result) => result,
+            Ok(result) => match result {
+                Some(result) => Ok(result),
+                None => Ok(vec![]),
+            },
             Err(err) => Err(format!("{:?}", err)),
         }
     }
 
     pub async fn save_template(env: String, name: String, yaml: String) -> Result<(), String> {
-        let result = tokio::spawn(async move {
-            let grpc_client = APP_CTX.get_templates_grpc_client().await;
-
-            let result = grpc_client
-                .save(SaveTemplateRequest { env, name, yaml })
-                .await;
-
-            match result {
-                Ok(_) => Ok(()),
-                Err(err) => Err(format!("{:?}", err)),
-            }
-        })
-        .await;
+        let result = APP_CTX
+            .templates_grpc
+            .save(SaveTemplateRequest { env, name, yaml })
+            .await;
 
         match result {
-            Ok(result) => result,
+            Ok(_) => Ok(()),
             Err(err) => Err(format!("{:?}", err)),
         }
     }
 
     pub async fn delete_template(env: String, name: String) -> Result<(), String> {
-        let result = tokio::spawn(async move {
-            let grpc_client = APP_CTX.get_templates_grpc_client().await;
-
-            let result = grpc_client
-                .delete(DeleteTemplateRequest { env, name })
-                .await;
-
-            match result {
-                Ok(_) => Ok(()),
-                Err(err) => Err(format!("{:?}", err)),
-            }
-        })
-        .await;
+        let result = APP_CTX
+            .templates_grpc
+            .delete(DeleteTemplateRequest { env, name })
+            .await;
 
         match result {
-            Ok(result) => result,
+            Ok(_) => Ok(()),
             Err(err) => Err(format!("{:?}", err)),
         }
     }
     pub async fn get_populated_template(env: String, name: String) -> Result<String, String> {
-        let result = tokio::spawn(async move {
-            let grpc_client = APP_CTX.get_templates_grpc_client().await;
-
-            let result = grpc_client
-                .compile_yaml(CompileYamlRequest { env, name })
-                .await;
-
-            match result {
-                Ok(result) => Ok(result.yaml),
-                Err(err) => Err(format!("{:?}", err)),
-            }
-        })
-        .await;
+        let result = APP_CTX
+            .templates_grpc
+            .compile_yaml(CompileYamlRequest { env, name })
+            .await;
 
         match result {
-            Ok(result) => result,
+            Ok(result) => Ok(result.yaml),
             Err(err) => Err(format!("{:?}", err)),
         }
     }

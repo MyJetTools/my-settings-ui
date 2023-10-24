@@ -1,11 +1,12 @@
 use std::{rc::Rc, collections::BTreeMap};
 
 use dioxus::prelude::*;
-use rust_extensions::date_time::DateTimeAsMicroseconds;
+use dioxus_fullstack::prelude::*;
+use serde::*;
 
 use crate::{
     states::{DialogState, DialogType, MainState},
-    views::icons::*, secrets_grpc::SecretListItem,
+    views::icons::*
 };
 
 pub enum OrderBy{
@@ -36,14 +37,14 @@ pub fn secrets_list(cx: Scope) -> Element {
             match order_by.get(){
                 OrderBy::Name => {
                     for secret in secrets{
-                    sorted.insert(&secret.name, secret);
+                    sorted.insert(secret.name.clone(), secret);
                   
                 };  
                 name_title.push(rsx!{ table_up_icon {} });
             },
          
                 OrderBy::Updated => {for secret in secrets{
-                    sorted.insert(&secret.updated, secret);
+                    sorted.insert(crate::utils::unix_microseconds_to_string(secret.updated) , secret);
                     
                 }updated_title.push(rsx!{ table_up_icon {} });
             },
@@ -94,6 +95,8 @@ pub fn secrets_list(cx: Scope) -> Element {
                     None
                 };
 
+                let created = crate::utils::unix_microseconds_to_string(itm.created);
+                let updated = crate::utils::unix_microseconds_to_string(itm.updated);
                 rsx! {
                     tr { style: "border-top: 1px solid lightgray;",
                         td { style: "padding-left: 10px",
@@ -138,8 +141,8 @@ pub fn secrets_list(cx: Scope) -> Element {
                         }
                         td { style: "padding: 10px", "{itm.name}", last_edited }
                         td { "{itm.level}" }
-                        td { "{itm.created}" }
-                        td { "{itm.updated}" }
+                        td { "{created}" }
+                        td { "{updated}" }
                         td {
                             div { class: "btn-group",
                                 button {
@@ -242,29 +245,20 @@ pub fn secrets_list(cx: Scope) -> Element {
             }
         }
         None => {
-            load_templates(&cx, &main_state);
+
+            let main_state= main_state.to_owned();
+            cx.spawn(async move{
+                let result = load_secrets().await.unwrap();
+                main_state.write().set_secrets(Some(result));
+            });
+            
             render! { h1 { "loading" } }
         }
     }
 }
 
-fn load_templates(cx: &Scope, main_state: &UseSharedState<MainState>) {
-    let main_state = main_state.to_owned();
 
-    cx.spawn(async move {
-       // let response = crate::api_client::get_list_of_secrets().await.unwrap();
-
-       let response = crate::grpc_client::SecretsGrpcClient::get_all_secrets()
-            .await
-            .unwrap();
-
-        main_state.write().set_secrets(Some(response));
-    });
-}
-
-
-
-fn get_last_edited(secrets: &Vec<SecretListItem>)->String{
+fn get_last_edited(secrets: &Vec<SecretListItemApiModel>)->String{
 
     let mut max = 0;
 
@@ -272,10 +266,9 @@ fn get_last_edited(secrets: &Vec<SecretListItem>)->String{
 
     for secret in secrets{
 
-        if let Some(updated) = DateTimeAsMicroseconds::from_str(&secret.updated){
-
-            if updated.unix_microseconds>max{
-                max = updated.unix_microseconds;
+        if secret.updated>0{
+            if secret.updated>max{
+                max = secret.updated;
                 value = secret.name.clone();
             }
 
@@ -283,5 +276,36 @@ fn get_last_edited(secrets: &Vec<SecretListItem>)->String{
     }
 
     value
+
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SecretListItemApiModel{
+    pub name: String,
+    pub level: i32, 
+    pub created: i64,
+    pub updated: i64,
+    pub used_by_templates: i32,
+    pub used_by_secrets: i32,
+}
+
+
+#[server]
+pub async fn load_secrets() -> Result<Vec<SecretListItemApiModel>, ServerFnError> {
+    let response = crate::grpc_client::SecretsGrpcClient::get_all_secrets()
+    .await
+    .unwrap();
+
+    use rust_extensions::date_time::DateTimeAsMicroseconds;
+
+    let result = response.into_iter().map(|itm|SecretListItemApiModel{
+         name: itm.name, 
+         level: itm.level, 
+         created: DateTimeAsMicroseconds::from_str(itm.created.as_str()).unwrap().unix_microseconds,
+         updated: DateTimeAsMicroseconds::from_str(itm.updated.as_str()).unwrap().unix_microseconds, 
+         used_by_templates: itm.used_by_templates,
+         used_by_secrets: itm.used_by_secrets }).collect();
+
+    Ok(result)
 
 }

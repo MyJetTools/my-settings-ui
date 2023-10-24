@@ -1,16 +1,15 @@
 use dioxus::prelude::*;
-
-use crate::secrets_grpc::TemplateUsageModel;
-
+use dioxus_fullstack::prelude::*;
+use serde::*;
 #[derive(Props, PartialEq, Eq)]
 pub struct ShowSecretUsageProps {
     pub secret: String,
 }
 
 pub fn show_secret_usage_by_template<'s>(cx: Scope<'s, ShowSecretUsageProps>) -> Element {
-    let secret_usage: &UseState<Option<Vec<TemplateUsageModel>>> = use_state(cx, || None);
+    let secret_usage_state: &UseState<Option<Vec<TemplateUsageApiModel>>> = use_state(cx, || None);
 
-    match secret_usage.get() {
+    match secret_usage_state.get() {
         Some(values) => {
             let to_render = values.into_iter().map(|itm| {
                 let items = itm.yaml.split("\n").map(|itm| {
@@ -39,25 +38,41 @@ pub fn show_secret_usage_by_template<'s>(cx: Scope<'s, ShowSecretUsageProps>) ->
             }
         }
         None => {
-            load_secret_usage(&cx, cx.props.secret.clone(), secret_usage);
+            let secret_id = cx.props.secret.to_string();
+
+            let secret_usage_state = secret_usage_state.to_owned();
+
+            cx.spawn(async move {
+                let result = load_secret_usage(secret_id).await.unwrap();
+                secret_usage_state.set(Some(result));
+            });
 
             render! { div { class: "modal-content", "Loading..." } }
         }
     }
 }
 
-fn load_secret_usage<'s>(
-    cx: &Scope<'s, ShowSecretUsageProps>,
-    secret_id: String,
-    state: &UseState<Option<Vec<TemplateUsageModel>>>,
-) {
-    let state = state.to_owned();
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TemplateUsageApiModel {
+    pub env: String,
+    pub name: String,
+    pub yaml: String,
+}
 
-    cx.spawn(async move {
-        let response = crate::grpc_client::SecretsGrpcClient::get_usage_of_templates(secret_id)
-            .await
-            .unwrap();
+#[server]
+async fn load_secret_usage(secret_id: String) -> Result<Vec<TemplateUsageApiModel>, ServerFnError> {
+    let response = crate::grpc_client::SecretsGrpcClient::get_usage_of_templates(secret_id)
+        .await
+        .unwrap();
 
-        state.set(Some(response))
-    });
+    let result: Vec<TemplateUsageApiModel> = response
+        .into_iter()
+        .map(|itm| TemplateUsageApiModel {
+            env: itm.env,
+            name: itm.name,
+            yaml: itm.yaml,
+        })
+        .collect();
+
+    Ok(result)
 }

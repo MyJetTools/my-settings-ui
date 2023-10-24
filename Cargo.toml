@@ -5,48 +5,64 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+ssr = [
+    "dioxus-fullstack/axum",
+    "my-logger",
+    "my-grpc-extensions",
+    "tokio",
+    "tonic",
+    "async-trait",
+    "anyhow",
+    "prost",
+    "prost-types",
+    "futures",
+    "lazy_static",
+    "serde_json",
+    "serde_yaml",
+]
+web = ["dioxus-fullstack/web"]
+
 [dependencies]
-my-settings-reader = { tag = "0.1.5", git = "https://github.com/MyJetTools/my-settings-reader.git", features = [
-    "background-reader",
-] }
-flurl = { tag = "0.4.0", git = "https://github.com/MyJetTools/fl-url.git" }
+rust-extensions = { tag = "0.1.4", git = "https://github.com/MyJetTools/rust-extensions.git" }
+my-logger = { tag = "1.0.2", git = "https://github.com/MyJetTools/my-logger.git", optional = true }
 
-rust-extensions = { tag = "0.1.3", git = "https://github.com/MyJetTools/rust-extensions.git" }
-my-logger = { tag = "0.2.1", git = "https://github.com/MyJetTools/my-logger.git" }
+my-grpc-extensions = { tag = "0.5.0", git = "https://github.com/MyJetTools/my-grpc-extensions.git", features = [
+    "grpc-client",
+], optional = true }
 
-
-dioxus = "*"
-dioxus-desktop = "*"
-dioxus-liveview = { varsion = "*", features = ["salvo"] }
-dioxus-ssr = "*"
 dioxus-free-icons = { path = "./libs/icon-packages/lib", features = [
     "bootstrap",
     "ionicons",
 ] }
 
-my-grpc-extensions = { tag = "0.5.0", git = "https://github.com/MyJetTools/my-grpc-extensions.git", features = [
-    "grpc-client",
-] }
+settings-utils = { tag = "0.1.1", git = "https://github.com/MyJetTools/settings-utils.git" }
+
+dioxus-fullstack = { version = "*", features = ["router"] }
+dioxus = { version = "*" }
+dioxus-router-macro = "*"
+dioxus-router = "*"
+dioxus-web = "*"
+serde = "*"
+chrono = "*"
 
 
-settings-utils = { tag = "0.1.0", git = "https://github.com/MyJetTools/settings-utils.git" }
-
-tokio = { version = "*", features = ["full"] }
-serde = { version = "*", features = ["derive"] }
-serde_json = "*"
-serde_yaml = "*"
-futures = "*"
-tonic = { version = "*", features = ["tls", "tls-roots", "prost"] }
-anyhow = "*"
-prost = "*"
-prost-types = "*"
-fermi = "*"
-futures-util = "*"
-salvo = { version = "*", features = ["full", "affix", "ws"] }
-once_cell = "*"
-async-trait = "*"
-lazy_static = "*"
-
+tokio = { version = "*", features = ["full"], optional = true }
+serde_json = { version = "*", optional = true }
+serde_yaml = { version = "*", optional = true }
+futures = { version = "*", optional = true }
+tonic = { version = "*", features = [
+    "tls",
+    "tls-roots",
+    "prost",
+], optional = true }
+anyhow = { version = "*", optional = true }
+prost = { version = "*", optional = true }
+prost-types = { version = "*", optional = true }
+async-trait = { version = "*", optional = true }
+lazy_static = { version = "*", optional = true }
+base64 = { version = "*" }
 
 [build-dependencies]
 ci-utils = { git = "https://github.com/MyJetTools/ci-utils.git", tag = "0.1.0" }

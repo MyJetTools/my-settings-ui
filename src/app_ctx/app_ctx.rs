@@ -1,48 +1,20 @@
 use std::sync::Arc;
 
-use tokio::sync::RwLock;
-
-use crate::grpc_client::*;
-use crate::settings::SettingsReader;
-pub struct AppCtxInner {
-    settings_reader: Arc<SettingsReader>,
-    pub templates_grpc: Arc<TemplatesGrpcClient>,
-    pub secrets_grpc: Arc<SecretsGrpcClient>,
-}
+use crate::{grpc_client::*, settings::SettingsModel};
 
 pub struct AppCtx {
-    inner: RwLock<Option<Arc<AppCtxInner>>>,
+    pub templates_grpc: Arc<TemplatesGrpcClient>,
+    pub secrets_grpc: Arc<SecretsGrpcClient>,
+    pub settings: Arc<SettingsModel>,
 }
 
 impl AppCtx {
     pub fn new() -> Self {
+        let settings = Arc::new(SettingsModel);
         Self {
-            inner: RwLock::new(None),
+            templates_grpc: Arc::new(TemplatesGrpcClient::new(settings.clone())),
+            secrets_grpc: Arc::new(SecretsGrpcClient::new(settings.clone())),
+            settings,
         }
-    }
-
-    pub async fn inject_settings(&self, settings_reader: Arc<SettingsReader>) {
-        let mut write_access = self.inner.write().await;
-
-        write_access.replace(Arc::new(AppCtxInner {
-            templates_grpc: Arc::new(TemplatesGrpcClient::new(settings_reader.clone())),
-            secrets_grpc: Arc::new(SecretsGrpcClient::new(settings_reader.clone())),
-            settings_reader: settings_reader,
-        }));
-    }
-
-    pub async fn get_settings_reader(&self) -> Arc<SettingsReader> {
-        let read_access = self.inner.read().await;
-        read_access.as_ref().unwrap().settings_reader.clone()
-    }
-
-    pub async fn get_templates_grpc_client(&self) -> Arc<TemplatesGrpcClient> {
-        let read_access = self.inner.read().await;
-        read_access.as_ref().unwrap().templates_grpc.clone()
-    }
-
-    pub async fn get_secrets_grpc_client(&self) -> Arc<SecretsGrpcClient> {
-        let read_access = self.inner.read().await;
-        read_access.as_ref().unwrap().secrets_grpc.clone()
     }
 }

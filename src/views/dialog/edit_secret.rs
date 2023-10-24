@@ -1,6 +1,8 @@
 use std::rc::Rc;
 
 use dioxus::prelude::*;
+use dioxus_fullstack::prelude::*;
+use serde::*;
 
 use crate::{
     states::{DialogState, MainState},
@@ -116,12 +118,11 @@ impl EditSecretState {
     }
 }
 
-pub fn edit_secret<'s>(cx: Scope<'s, EditSecretProps>) -> Element {
-    let dialog_state = use_state(cx, || EditSecretState::new(cx.props.secret.clone()));
+pub fn edit_secret(cx: Scope<EditSecretProps>) -> Element {
+    let dialog_state = use_state(cx, || EditSecretState::new(cx.props.secret.to_string()));
 
     let (edit_mode, value_is_loaded, save_button_is_disabled, name_is_read_only) = {
         let read_access = dialog_state.get();
-
         (
             read_access.edit_mode(),
             read_access.value_is_loaded(),
@@ -131,7 +132,12 @@ pub fn edit_secret<'s>(cx: Scope<'s, EditSecretProps>) -> Element {
     };
 
     if edit_mode && !value_is_loaded {
-        load_secret(&cx, cx.props.secret.to_string(), &dialog_state);
+        let secret_id = cx.props.secret.to_string();
+        let dialog_state = dialog_state.to_owned();
+        cx.spawn(async move {
+            let response = load_secret(secret_id).await.unwrap();
+            dialog_state.modify(|itm| itm.set_loaded_values(response.value, response.level));
+        });
     }
 
     render! {
@@ -177,7 +183,18 @@ pub fn edit_secret<'s>(cx: Scope<'s, EditSecretProps>) -> Element {
                     class: "btn btn-primary",
                     disabled: save_button_is_disabled,
                     onclick: move |_| {
-                        save_secret(cx, &dialog_state);
+                        let name = dialog_state.get().get_secret_name().to_string();
+                        let value = dialog_state.get().get_secret_value().to_string();
+                        let level = dialog_state.get().get_secret_level_value();
+                        let dialog_state: UseSharedState<DialogState> = use_shared_state::<DialogState>(cx)
+                            .unwrap()
+                            .to_owned();
+                        let main_state = use_shared_state::<MainState>(cx).unwrap().to_owned();
+                        cx.spawn(async move {
+                            save_secret(name, value, level).await.unwrap();
+                            dialog_state.write().hide_dialog();
+                            main_state.write().set_secrets(None);
+                        });
                     },
                     ok_button_icon {}
                     "Save"
@@ -195,44 +212,49 @@ pub fn edit_secret<'s>(cx: Scope<'s, EditSecretProps>) -> Element {
     }
 }
 
-fn load_secret<'s>(
-    cx: &'s Scope<'s, EditSecretProps>,
-    secret_id: String,
-    dialog_state: &UseState<EditSecretState>,
-) {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SecretValueApiModel {
+    pub value: String,
+    pub level: i32,
+}
+
+#[server]
+pub async fn load_secret<'s>(secret_id: String) -> Result<SecretValueApiModel, ServerFnError> {
+    let response = crate::grpc_client::SecretsGrpcClient::get_secret(secret_id)
+        .await
+        .unwrap();
+
+    let result = SecretValueApiModel {
+        value: response.value,
+        level: response.level,
+    };
+
+    Ok(result)
+    /*
     let dialog_state = dialog_state.to_owned();
 
     cx.spawn(async move {
-        let response = crate::grpc_client::SecretsGrpcClient::get_secret(secret_id)
-            .await
-            .unwrap();
+
         dialog_state.modify(|itm| itm.set_loaded_values(response.value, response.level));
-    });
+    }); */
 }
+#[server]
+pub async fn save_secret<'s>(name: String, value: String, level: i32) -> Result<(), ServerFnError> {
+    crate::grpc_client::SecretsGrpcClient::save_secret(name.clone(), value, level)
+        .await
+        .unwrap();
 
-fn save_secret<'s>(
-    cx: &'s Scoped<'s, EditSecretProps>,
-    edit_secret_state: &UseState<EditSecretState>,
-) {
-    let (name, value, level) = {
-        let read_access = edit_secret_state.get();
-        (
-            read_access.get_secret_name().to_string(),
-            read_access.get_secret_value().to_string(),
-            read_access.get_secret_level_value(),
-        )
-    };
+    Ok(())
 
+    /*
     let main_state = use_shared_state::<MainState>(cx).unwrap().to_owned();
     let dialog_state: UseSharedState<DialogState> =
         use_shared_state::<DialogState>(cx).unwrap().to_owned();
 
     cx.spawn(async move {
-        crate::grpc_client::SecretsGrpcClient::save_secret(name.clone(), value, level)
-            .await
-            .unwrap();
 
-        dialog_state.write().hide_dialog();
-        main_state.write().set_secrets(None);
+
+
     })
+     */
 }

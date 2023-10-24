@@ -1,4 +1,6 @@
 use dioxus::prelude::*;
+use dioxus_fullstack::prelude::*;
+use serde::*;
 
 #[derive(Props, PartialEq, Eq)]
 pub struct ShowPopulatedYamlProps {
@@ -7,34 +9,43 @@ pub struct ShowPopulatedYamlProps {
 }
 
 pub fn show_populated_yaml<'s>(cx: Scope<'s, ShowPopulatedYamlProps>) -> Element {
-    let yaml = use_state(cx, || "".to_string());
+    let yaml_state: &UseState<Option<String>> = use_state(cx, || None);
 
-    if yaml.is_empty() {
-        load_yaml(&cx, yaml);
-
-        return render! {
-            div { class: "modal-content", div { class: "form-control modal-content-full-screen", "Loading..." } }
-        };
-    }
-
-    render! {
-        div { class: "modal-content",
-            textarea { class: "form-control modal-content-full-screen", readonly: true, yaml.as_str() }
+    match yaml_state.get() {
+        Some(yaml) => {
+            render! {
+                div { class: "modal-content",
+                    textarea { class: "form-control modal-content-full-screen", readonly: true, yaml.as_str() }
+                }
+            }
+        }
+        None => {
+            let name = cx.props.name.to_string();
+            let env = cx.props.env.to_string();
+            let yaml_state = yaml_state.to_owned();
+            cx.spawn(async move {
+                let result = load_yaml(env, name).await.unwrap();
+                yaml_state.set(Some(result.yaml));
+            });
+            return render! {
+                div { class: "modal-content", div { class: "form-control modal-content-full-screen", "Loading..." } }
+            };
         }
     }
 }
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PopulatedYamlModelApiModel {
+    pub yaml: String,
+}
 
-fn load_yaml<'s>(cx: &'s Scope<'s, ShowPopulatedYamlProps>, state: &UseState<String>) {
-    let env = cx.props.env.clone();
-    let name = cx.props.name.clone();
+#[server]
+async fn load_yaml<'s>(
+    env: String,
+    name: String,
+) -> Result<PopulatedYamlModelApiModel, ServerFnError> {
+    let yaml = crate::grpc_client::TemplatesGrpcClient::get_populated_template(env, name)
+        .await
+        .unwrap();
 
-    let state = state.to_owned();
-
-    cx.spawn(async move {
-        let yaml = crate::grpc_client::TemplatesGrpcClient::get_populated_template(env, name)
-            .await
-            .unwrap();
-
-        state.set(yaml);
-    });
+    Ok(PopulatedYamlModelApiModel { yaml })
 }

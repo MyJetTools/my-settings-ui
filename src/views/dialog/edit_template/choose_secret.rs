@@ -1,6 +1,9 @@
 use dioxus::prelude::*;
 
-use crate::{secrets_grpc::SecretListItem, views::dialog::select_secret};
+use crate::views::{
+    dialog::{load_secret, save_secret, select_secret},
+    load_secrets, SecretListItemApiModel,
+};
 
 #[derive(Props)]
 pub struct ChooseSecretProps<'s> {
@@ -11,7 +14,7 @@ pub fn choose_secret<'s>(cx: Scope<'s, ChooseSecretProps<'s>>) -> Element {
     let filter = use_state(cx, || "".to_string());
     let secret_name: &UseState<String> = use_state(cx, || "".to_string());
 
-    let secrets: &UseState<Option<Vec<SecretListItem>>> = use_state(cx, || None);
+    let secrets: &UseState<Option<Vec<SecretListItemApiModel>>> = use_state(cx, || None);
 
     let mode = use_state(cx, || ChooseSecretMode::Select);
 
@@ -22,7 +25,11 @@ pub fn choose_secret<'s>(cx: Scope<'s, ChooseSecretProps<'s>>) -> Element {
     let content = match mode.get() {
         ChooseSecretMode::Select => {
             if secrets.get().is_none() {
-                load_secrets(&cx, secrets);
+                let secrets = secrets.to_owned();
+                cx.spawn(async move {
+                    let result = load_secrets().await.unwrap();
+                    secrets.set(Some(result));
+                })
             }
 
             match secrets.get() {
@@ -63,14 +70,12 @@ pub fn choose_secret<'s>(cx: Scope<'s, ChooseSecretProps<'s>>) -> Element {
                     button {
                         class: "btn btn-primary",
                         onclick: move |_| {
-                            add_secret(
-                                cx,
-                                mode,
-                                secrets,
-                                secret_name.get(),
-                                secret_value.get(),
-                                secret_level.get().parse::<i32>().unwrap(),
-                            );
+                            let name = secret_name.get().to_string();
+                            let value = secret_value.get().to_string();
+                            let level = secret_level.get().parse::<i32>().unwrap();
+                            cx.spawn(async move {
+                                save_secret(name, value, level).await.unwrap();
+                            });
                         },
                         "Add new secret"
                     }
@@ -106,7 +111,11 @@ pub fn choose_secret<'s>(cx: Scope<'s, ChooseSecretProps<'s>>) -> Element {
                 h4 { "Copy value from other secret" }
                 select_secret {
                     on_selected: move |value: String| {
-                        copy_secret_value(cx, &value, secret_value);
+                        let secret_value = secret_value.to_owned();
+                        cx.spawn(async move {
+                            let result = load_secret(value).await.unwrap();
+                            secret_value.set(result.value);
+                        });
                     }
                 }
             };
@@ -163,6 +172,7 @@ pub fn choose_secret<'s>(cx: Scope<'s, ChooseSecretProps<'s>>) -> Element {
     }
 }
 
+/*
 fn load_secrets<'s>(
     cx: &Scope<'s, ChooseSecretProps<'s>>,
     secrets: &UseState<Option<Vec<SecretListItem>>>,
@@ -176,7 +186,9 @@ fn load_secrets<'s>(
         secrets.set(Some(secrets_values));
     });
 }
+ */
 
+/*
 fn add_secret<'s>(
     cx: &Scoped<'s, ChooseSecretProps<'s>>,
     mode: &UseState<ChooseSecretMode>,
@@ -220,13 +232,14 @@ fn copy_secret_value<'s>(
         }
     });
 }
+ */
 
 pub enum ChooseSecretMode {
     Select,
     Add,
 }
 
-fn has_secret(secrets: &Option<Vec<SecretListItem>>, secret_to_find: &str) -> bool {
+fn has_secret(secrets: &Option<Vec<SecretListItemApiModel>>, secret_to_find: &str) -> bool {
     match secrets {
         Some(values) => {
             for value in values {

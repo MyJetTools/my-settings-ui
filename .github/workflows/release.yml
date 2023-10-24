@@ -6,7 +6,6 @@ on:
 env:
   IMAGE_NAME: myjettools/my-settings-ui
 
-
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -16,8 +15,14 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y libssl-dev          
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v1             
+
+      - name: "Install Dioxus-CLI"
+        run: cargo install dioxus-cli --locked     
+
+      #- name: Install dependencies
+      #  run: sudo apt-get update && sudo apt-get install -y libssl-dev          
 
       - name: Get the version
         id: get_version
@@ -26,27 +31,11 @@ jobs:
       - name: Updating version
         run: sed -i -e 's/^version = .*/version = "${{ steps.get_version.outputs.VERSION }}"/' Cargo.toml
 
-      - name: Install Protoc
-        uses: arduino/setup-protoc@v1      
+      - run: rustup target add wasm32-unknown-unknown   
 
-      - run: openssl version
-
-      - run: echo $LD_LIBRARY_PATH
-
-      - run: sudo apt install build-essential -y
-      - run: sudo apt install libglib2.0-dev -y
-      - run: sudo apt install pkg-config libssl-dev -y
-      - run: sudo apt install libgtk-3-dev -y
-
-      - run: sudo apt upgrade -y
-
-      - run: sudo apt update -y
-
-      - run: sudo apt-get install javascriptcoregtk-4.1 libsoup-3.0 webkit2gtk-4.1 -y
-
-
+      - run: dx build --features web --release
               
-      - run: cargo build --release
+      - run: cargo build --features ssr --release
 
       - name: Docker login
         env:

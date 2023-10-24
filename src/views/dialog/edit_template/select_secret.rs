@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::secrets_grpc::SecretListItem;
+use crate::views::{load_secrets, SecretListItemApiModel};
 
 #[derive(Props)]
 pub struct SelectSecretProps<'s> {
@@ -8,14 +8,18 @@ pub struct SelectSecretProps<'s> {
 }
 
 pub fn select_secret<'s>(cx: Scope<'s, SelectSecretProps<'s>>) -> Element {
-    let secrets: &UseState<Option<Vec<SecretListItem>>> = use_state(cx, || None);
+    let secrets_state = use_state::<Option<Vec<SecretListItemApiModel>>>(cx, || None);
     let filter = use_state(cx, || "".to_string());
 
-    if secrets.get().is_none() {
-        load_secrets(&cx, secrets);
+    if secrets_state.get().is_none() {
+        let secrets_state = secrets_state.to_owned();
+        cx.spawn(async move {
+            let result = load_secrets().await.unwrap();
+            secrets_state.set(Some(result));
+        })
     }
 
-    let content = match secrets.get() {
+    let content = match secrets_state.get() {
         Some(values) => {
             if filter.len() > 3 {
                 let mut result = Vec::new();
@@ -56,18 +60,4 @@ pub fn select_secret<'s>(cx: Scope<'s, SelectSecretProps<'s>>) -> Element {
 
         div { style: "height:300px; overflow-y: auto;", content.into_iter() }
     }
-}
-
-fn load_secrets<'s>(
-    cx: &Scope<'s, SelectSecretProps<'s>>,
-    secrets: &UseState<Option<Vec<SecretListItem>>>,
-) {
-    let secrets = secrets.to_owned();
-    cx.spawn(async move {
-        let secrets_values = crate::grpc_client::SecretsGrpcClient::get_all_secrets()
-            .await
-            .unwrap();
-
-        secrets.set(Some(secrets_values));
-    });
 }

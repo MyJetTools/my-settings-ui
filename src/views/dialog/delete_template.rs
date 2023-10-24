@@ -1,16 +1,16 @@
-use dioxus::prelude::*;
-
 use crate::{
     states::{DialogState, MainState},
     views::icons::*,
 };
+use dioxus::prelude::*;
+use dioxus_fullstack::prelude::*;
 
 #[derive(Props, PartialEq, Eq)]
 pub struct DeleteTemplateProps {
     pub env: String,
     pub name: String,
 }
-pub fn delete_template<'s>(cx: Scope<'s, DeleteTemplateProps>) -> Element {
+pub fn delete_template_dialog<'s>(cx: Scope<'s, DeleteTemplateProps>) -> Element {
     let content = format!(
         "You are about to delete a template {}/{}",
         cx.props.env, cx.props.name
@@ -24,7 +24,17 @@ pub fn delete_template<'s>(cx: Scope<'s, DeleteTemplateProps>) -> Element {
                 button {
                     class: "btn btn-primary",
                     onclick: move |_| {
-                        do_delete_template(cx);
+                        let env = cx.props.env.to_string();
+                        let name = cx.props.env.to_string();
+                        let main_state = use_shared_state::<MainState>(cx).unwrap().to_owned();
+                        let dialog_state: UseSharedState<DialogState> = use_shared_state::<DialogState>(cx)
+                            .unwrap()
+                            .to_owned();
+                        cx.spawn(async move {
+                            delete_template(env, name).await.unwrap();
+                            dialog_state.write().hide_dialog();
+                            main_state.write().set_templates(None);
+                        });
                     },
                     ok_button_icon {}
                     "Save"
@@ -42,7 +52,14 @@ pub fn delete_template<'s>(cx: Scope<'s, DeleteTemplateProps>) -> Element {
     }
 }
 
-fn do_delete_template<'s>(cx: &'s Scoped<'s, DeleteTemplateProps>) {
+#[server]
+async fn delete_template(env: String, name: String) -> Result<(), ServerFnError> {
+    crate::grpc_client::TemplatesGrpcClient::delete_template(env, name)
+        .await
+        .unwrap();
+
+    Ok(())
+    /*
     let env = cx.props.env.clone();
     let name = cx.props.name.clone();
 
@@ -51,11 +68,10 @@ fn do_delete_template<'s>(cx: &'s Scoped<'s, DeleteTemplateProps>) {
         use_shared_state::<DialogState>(cx).unwrap().to_owned();
 
     cx.spawn(async move {
-        crate::grpc_client::TemplatesGrpcClient::delete_template(env, name)
-            .await
-            .unwrap();
+
 
         dialog_state.write().hide_dialog();
         main_state.write().set_templates(None);
     })
+     */
 }

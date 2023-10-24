@@ -29,7 +29,7 @@ pub fn render_dialog(cx: Scope) -> Element {
                 }
                 DialogType::DeleteSecret(secret) => {
                     dialog_class = "modal-dialog-narrow";
-                    rsx! { delete_secret { secret: secret.clone() } }
+                    rsx! { delete_secret_dialog { secret: secret.clone() } }
                 }
 
                 DialogType::AddTemplate => {
@@ -46,7 +46,7 @@ pub fn render_dialog(cx: Scope) -> Element {
 
                 DialogType::DeleteTemplate { env, name } => {
                     dialog_class = "modal-dialog-narrow";
-                    rsx! { delete_template { env: env.to_string(), name: name.to_string() } }
+                    rsx! { delete_template_dialog { env: env.to_string(), name: name.to_string() } }
                 }
 
                 DialogType::ShowPopulatedYaml { env, name } => {

@@ -1,13 +1,10 @@
 use std::rc::Rc;
 
-use dioxus::prelude::*;
-use rust_extensions::date_time::DateTimeAsMicroseconds;
-
 use super::icons::*;
-use crate::{
-    states::{DialogState, DialogType, MainState},
-    templates_grpc::TemplateListItem,
-};
+use crate::states::{DialogState, DialogType, MainState};
+use dioxus::prelude::*;
+use dioxus_fullstack::prelude::*;
+use serde::*;
 
 pub fn templates_list(cx: Scope) -> Element {
     let main_state = use_shared_state::<MainState>(cx).unwrap();
@@ -30,8 +27,7 @@ pub fn templates_list(cx: Scope) -> Element {
                 let last_request = if itm.last_requests == 0 {
                     "".to_string()
                 } else {
-                    let last_request = DateTimeAsMicroseconds::new(itm.last_requests * 1000);
-                    last_request.to_rfc3339()
+                    crate::utils::unix_microseconds_to_string(itm.last_requests * 1000)
                 };
 
                 let env = Rc::new(itm.env.to_string());
@@ -63,6 +59,7 @@ pub fn templates_list(cx: Scope) -> Element {
                     None
                 };
 
+      
                 rsx! {
                     tr { style: "border-top: 1px solid lightgray",
                         td { alert }
@@ -198,34 +195,68 @@ pub fn templates_list(cx: Scope) -> Element {
             }
         }
         None => {
-            load_templates(&cx, &main_state);
+            let main_state = main_state.to_owned();
+            cx.spawn(async move {
+                let response = load_templates().await.unwrap();
+                main_state.write().set_templates(Some(response));
+            });
+
             render! { h1 { "loading" } }
         }
     }
 }
 
-fn load_templates(cx: &Scope, main_state: &UseSharedState<MainState>) {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct TemplateApiModel {
+    pub env: String,
+    pub name: String,
+    pub created: String,
+    pub updated: String,
+    pub last_requests: i64,
+    pub has_missing_placeholders: bool,
+}
+
+#[server]
+async fn load_templates() -> Result<Vec<TemplateApiModel>, ServerFnError> {
+    let response = crate::grpc_client::TemplatesGrpcClient::get_all_templates()
+        .await
+        .unwrap();
+
+    let result: Vec<_> = response
+        .into_iter()
+        .map(|itm| TemplateApiModel {
+            env: itm.env,
+            name: itm.name,
+            created: itm.created,
+            updated: itm.updated,
+            last_requests: itm.last_requests,
+            has_missing_placeholders: itm.has_missing_placeholders,
+        })
+        .collect();
+
+    Ok(result)
+
+    /*
     let main_state = main_state.to_owned();
 
     cx.spawn(async move {
-        let response = crate::grpc_client::TemplatesGrpcClient::get_all_templates()
-            .await
-            .unwrap();
+
 
         main_state.write().set_templates(Some(response));
     });
+     */
 }
 
-fn get_last_edited(templates: &Vec<TemplateListItem>) -> (String, String) {
-    let mut max = 0;
+fn get_last_edited(templates: &Vec<TemplateApiModel>) -> (String, String) {
+    let mut max = "";
 
     let mut env = "".to_string();
     let mut name = "".to_string();
 
     for template in templates {
-        if let Some(updated) = DateTimeAsMicroseconds::from_str(&template.updated) {
-            if updated.unix_microseconds > max {
-                max = updated.unix_microseconds;
+        if template.updated.len() > 0 {
+            if template.updated.as_str() > max {
+                max = &template.updated;
                 env = template.env.clone();
                 name = template.name.clone();
             }

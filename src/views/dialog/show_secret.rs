@@ -1,4 +1,6 @@
 use dioxus::prelude::*;
+use dioxus_fullstack::prelude::*;
+use serde::*;
 
 use crate::{states::DialogState, views::icons::ok_button_icon};
 
@@ -8,16 +10,21 @@ pub struct ShowSecretProps {
 }
 
 pub fn show_secret<'s>(cx: Scope<'s, ShowSecretProps>) -> Element {
-    let value = use_state(cx, || "".to_string());
+    let value_state = use_state(cx, || "".to_string());
 
-    if value.get().is_empty() {
-        load_secret(&cx, cx.props.secret.to_string(), &value);
+    if value_state.get().is_empty() {
+        let secret_id = cx.props.secret.to_string();
+        let value_state_owned = value_state.to_owned();
+        cx.spawn(async move {
+            let result = load_secret(secret_id).await.unwrap();
+            value_state_owned.set(result.value);
+        })
     }
 
     render! {
         div { class: "modal-content",
             div { class: "form-floating mb-3",
-                input { class: "form-control", readonly: true, value: "{value.get()}" }
+                input { class: "form-control", readonly: true, value: "{value_state.get()}" }
                 label { "Secret value" }
             }
         }
@@ -36,14 +43,20 @@ pub fn show_secret<'s>(cx: Scope<'s, ShowSecretProps>) -> Element {
     }
 }
 
-fn load_secret<'s>(cx: &Scope<'s, ShowSecretProps>, secret_id: String, state: &UseState<String>) {
-    let state = state.to_owned();
+#[derive(Serialize, Deserialize, Debug)]
+pub struct SecretValueApiModel {
+    pub value: String,
+}
 
-    cx.spawn(async move {
-        let response = crate::grpc_client::SecretsGrpcClient::get_secret(secret_id)
-            .await
-            .unwrap();
+#[server]
+async fn load_secret<'s>(secret_id: String) -> Result<SecretValueApiModel, ServerFnError> {
+    let response = crate::grpc_client::SecretsGrpcClient::get_secret(secret_id)
+        .await
+        .unwrap();
 
-        state.set(response.value)
-    });
+    let result = SecretValueApiModel {
+        value: response.value,
+    };
+
+    Ok(result)
 }

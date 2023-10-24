@@ -45,7 +45,12 @@ message TemplateListItem{
    bool HasMissingPlaceholders = 6;
 }
 
+message ServerInfoResponse{
+   string EnvName = 1;
+}
+
 service Templates {
+    rpc GetServerInfo(google.protobuf.Empty) returns (ServerInfoResponse);
     rpc Get(GetTemplateRequest) returns (GetTemplateResponse);
     rpc GetAll(google.protobuf.Empty) returns (stream TemplateListItem);
 
