@@ -25,7 +25,7 @@ pub fn delete_template_dialog<'s>(cx: Scope<'s, DeleteTemplateProps>) -> Element
                     class: "btn btn-primary",
                     onclick: move |_| {
                         let env = cx.props.env.to_string();
-                        let name = cx.props.env.to_string();
+                        let name = cx.props.name.to_string();
                         let main_state = use_shared_state::<MainState>(cx).unwrap().to_owned();
                         let dialog_state: UseSharedState<DialogState> = use_shared_state::<DialogState>(cx)
                             .unwrap()
