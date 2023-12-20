@@ -44,7 +44,11 @@ pub fn templates_list(cx: Scope) -> Element {
 
                 let last_edited = if last_edited.0.as_str() == env.as_str() && last_edited.1.as_str() == name.as_str(){
                     Some(rsx!(
-                        span { id: "last-edited-badge", class: "badge badge-success ", "Last edited" }
+                        span {
+                            id: "last-edited-badge",
+                            class: "badge badge-success not-selectable",
+                            "Last edited"
+                        }
                         script { r#"scroll_to('last-edited-badge')"# }
                     ))
                 }else{
