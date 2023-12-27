@@ -1,0 +1,35 @@
+
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+package domains;
+
+
+message DomainsInfoGrpcResponse{
+   optional string DomainMask = 1;
+   repeated DomainProductGrpcInfo Products = 2;
+}
+
+
+message DomainProductGrpcInfo{
+   string ProductName = 1;
+   bool IsCloudFlareProxy =2;
+   string InternalDomainName =3;
+}
+
+message SetDomainMaskRequest{
+   string DomainMask = 1;
+}
+
+message DeleteDomainProductInfoRequest{
+   string DomainMask = 1;
+   string ProductName = 2;
+}
+
+
+service Domains {
+    rpc GetDomainsInfo(google.protobuf.Empty) returns (DomainsInfoGrpcResponse);
+    rpc SetDomainMask(SetDomainMaskRequest) returns (google.protobuf.Empty);
+    rpc SetProductInfo(DomainProductGrpcInfo) returns (google.protobuf.Empty);
+    rpc DeleteProductInfo(DeleteDomainProductInfoRequest) returns (google.protobuf.Empty);
+    rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
+ }

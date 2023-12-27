@@ -15,5 +15,9 @@ pub fn right_panel(cx: Scope) -> Element {
         MainState::Secrets(_) => {
             render!(secrets_list {})
         }
+
+        MainState::Domains(_) => {
+            render!(domains_list {})
+        }
     }
 }

@@ -1,6 +1,6 @@
 use serde::*;
 
-use crate::grpc_client::{SecretsGrpcClient, TemplatesGrpcClient};
+use crate::grpc_client::*;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SettingsModel;
@@ -8,6 +8,10 @@ pub struct SettingsModel;
 impl SettingsModel {
     pub fn get_env_name(&self) -> String {
         read_env_variable("ENV_INFO")
+    }
+
+    pub fn get_cloud_flare_url(&self) -> String {
+        read_env_variable("CLOUD_FLARE_URL")
     }
 }
 
@@ -19,6 +23,10 @@ impl my_grpc_extensions::GrpcClientSettings for SettingsModel {
         }
 
         if name == SecretsGrpcClient::get_service_name() {
+            return read_env_variable("SETTINGS_SERVICE_GRPC_URL");
+        }
+
+        if name == DomainsGrpcClient::get_service_name() {
             return read_env_variable("SETTINGS_SERVICE_GRPC_URL");
         }
 

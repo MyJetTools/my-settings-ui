@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 pub enum DialogType {
     ShowSecret(String),
     AddSecret,
@@ -5,12 +7,39 @@ pub enum DialogType {
     DeleteSecret(String),
 
     AddTemplate,
-    AddTemplateFromOtherTemplate { env: String, name: String },
-    EditTemplate { env: String, name: String },
-    DeleteTemplate { env: String, name: String },
-    ShowPopulatedYaml { env: String, name: String },
+    AddTemplateFromOtherTemplate {
+        env: String,
+        name: String,
+    },
+    EditTemplate {
+        env: String,
+        name: String,
+    },
+    DeleteTemplate {
+        env: String,
+        name: String,
+    },
+    ShowPopulatedYaml {
+        env: String,
+        name: String,
+    },
     SecretUsage(String),
     SecretUsageBySecret(String),
+
+    AddDomainProduct,
+
+    EditDomainProduct {
+        name: String,
+        cloud_flare_proxy_pass: bool,
+        internal_domain_name: String,
+    },
+
+    EditDomainMask(String),
+
+    EditCfDomainRecord {
+        domain: Rc<String>,
+        proxied: bool,
+    },
 }
 
 pub enum DialogState {

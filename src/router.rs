@@ -1,5 +1,5 @@
 //use dioxus_router_macro::Routable;
-use crate::{Home, Secrets, Templates};
+use crate::{Domains, Home, Secrets, Templates};
 use dioxus::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -11,4 +11,6 @@ pub enum AppRoute {
     Templates,
     #[route("/secrets")]
     Secrets,
+    #[route("/domains")]
+    Domains,
 }

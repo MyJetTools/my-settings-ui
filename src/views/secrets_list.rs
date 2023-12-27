@@ -5,7 +5,7 @@ use dioxus_fullstack::prelude::*;
 use serde::*;
 
 use crate::{
-    states::{DialogState, DialogType, MainState},
+    states::{DialogState, DialogType, MainState, FilterSecret},
     views::icons::*
 };
 
@@ -17,9 +17,10 @@ pub enum OrderBy{
 pub fn secrets_list(cx: Scope) -> Element {
     let main_state = use_shared_state::<MainState>(cx).unwrap();
 
-    let filter_secret = use_state(cx, || "".to_string());
+    let filter_secret = use_shared_state::<FilterSecret>(cx).unwrap();
 
-    let value_to_filter = filter_secret.get().to_lowercase();
+    let value_to_filter = filter_secret.read();
+    let value_to_filter = value_to_filter.as_str();
 
 
     let order_by = use_state(cx, || OrderBy::Name);
@@ -212,8 +213,10 @@ pub fn secrets_list(cx: Scope) -> Element {
                                             span { class: "input-group-text", search_icon {} }
                                             input {
                                                 class: "form-control form-control-sm",
+                                                value: "{value_to_filter}",
                                                 oninput: move |cx| {
-                                                    filter_secret.set(cx.value.to_string());
+                                                    let mut write = filter_secret.write();
+                                                    write.set_value(cx.value.as_str());
                                                 }
                                             }
                                         }

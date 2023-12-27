@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use super::icons::*;
-use crate::states::{DialogState, DialogType, MainState};
+use crate::states::{DialogState, DialogType, MainState, FilterTemplate};
 use dioxus::prelude::*;
 use dioxus_fullstack::prelude::*;
 use serde::*;
@@ -9,9 +9,10 @@ use serde::*;
 pub fn templates_list(cx: Scope) -> Element {
     let main_state = use_shared_state::<MainState>(cx).unwrap();
 
-    let filter = use_state(cx, || "".to_string());
+    let filter = use_shared_state::<FilterTemplate>(cx).unwrap();
 
-    let value_to_filter = filter.get().to_lowercase();
+    let value_to_filter = filter.read();
+    let value_to_filter = value_to_filter.as_str();
 
     match main_state.read().unwrap_as_templates() {
         Some(templates) => {
@@ -166,8 +167,10 @@ pub fn templates_list(cx: Scope) -> Element {
                                             span { class: "input-group-text", search_icon {} }
                                             input {
                                                 class: "form-control form-control-sm",
+                                                value: "{value_to_filter}",
                                                 oninput: move |cx| {
-                                                    filter.set(cx.value.to_string());
+                                                    let mut filter = filter.write();
+                                                    filter.set_value(cx.value.as_str());
                                                 }
                                             }
                                         }

@@ -8,3 +8,7 @@ mod icons;
 mod secrets_list;
 pub use secrets_list::*;
 pub mod dialog;
+mod domains_list;
+pub use domains_list::*;
+mod proxy_pass_icon;
+pub use proxy_pass_icon::*;

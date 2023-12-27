@@ -67,6 +67,33 @@ pub fn render_dialog(cx: Scope) -> Element {
                     let secret = secret.clone();
                     rsx! { show_secret_usage_by_secret { secret: secret } }
                 }
+
+                DialogType::EditDomainMask(mask)=>{
+                    dialog_class = "modal-dialog-narrow";
+                    rsx! { edit_domain_mask { mask: mask.to_string() } }
+                }
+
+                DialogType::AddDomainProduct=>{
+                    dialog_class = "modal-dialog-narrow";
+                    rsx! {edit_domain_product { add: true, name: "".to_string(), is_cloud_flare_proxy_pass: false, internal_domain_name: "".to_string() }}
+                }
+
+                DialogType::EditDomainProduct { name, cloud_flare_proxy_pass, internal_domain_name }=>{
+                    dialog_class = "modal-dialog-narrow";
+                    rsx! {
+                        edit_domain_product {
+                            add: false,
+                            name: name.clone(),
+                            is_cloud_flare_proxy_pass: *cloud_flare_proxy_pass,
+                            internal_domain_name: internal_domain_name.clone()
+                        }
+                    }
+                }
+
+                DialogType::EditCfDomainRecord{domain, proxied}=>{
+                    dialog_class = "modal-dialog-narrow";
+                    rsx! { EditCfRecord { domain: domain.clone(), proxied: *proxied } }
+                }
             };
 
             rsx! {

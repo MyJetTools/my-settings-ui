@@ -21,6 +21,7 @@ ssr = [
     "lazy_static",
     "serde_json",
     "serde_yaml",
+    "flurl",
 ]
 web = ["dioxus-fullstack/web"]
 
@@ -62,6 +63,7 @@ prost = { version = "*", optional = true }
 prost-types = { version = "*", optional = true }
 async-trait = { version = "*", optional = true }
 lazy_static = { version = "*", optional = true }
+flurl = { tag = "0.5.0", git = "https://github.com/MyJetTools/fl-url.git", optional = true }
 base64 = { version = "*" }
 
 [build-dependencies]

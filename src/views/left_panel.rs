@@ -10,6 +10,7 @@ pub fn left_panel(cx: Scope) -> Element {
 
     let mut secrets_active = "";
     let mut templates_active = "";
+    let mut domains_active = "";
 
     match &*main_state.read() {
         MainState::Nothing => {}
@@ -18,6 +19,9 @@ pub fn left_panel(cx: Scope) -> Element {
         }
         MainState::Secrets(_) => {
             secrets_active = ACTIVE_CLASS;
+        }
+        MainState::Domains(_) => {
+            domains_active = ACTIVE_CLASS;
         }
     }
 
@@ -60,6 +64,18 @@ pub fn left_panel(cx: Scope) -> Element {
                         }
                     },
                     "Templates"
+                }
+            }
+
+            div { class: "menu-item {domains_active}",
+                Link {
+                    to: AppRoute::Domains,
+                    onclick: move |_| {
+                        if !main_state.read().is_domains() {
+                            main_state.write().set_domains(None);
+                        }
+                    },
+                    "Domains"
                 }
             }
         }

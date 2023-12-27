@@ -154,3 +154,12 @@ body {
     color: white !important;
     margin-left: 10px !important;
 }
+
+.not-selectable {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}

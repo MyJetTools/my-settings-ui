@@ -36,6 +36,11 @@ pub mod secrets_grpc {
     tonic::include_proto!("secrets");
 }
 
+#[cfg(feature = "ssr")]
+pub mod domains_grpc {
+    tonic::include_proto!("domains");
+}
+
 fn main() {
     let config = LaunchBuilder::<FullstackRouterConfig<AppRoute>>::router();
 
@@ -60,8 +65,18 @@ fn Secrets(cx: Scope) -> Element {
     render! { my_layout {} }
 }
 
+fn Domains(cx: Scope) -> Element {
+    use_shared_state_provider(cx, || MainState::Domains(None));
+    render! { my_layout {} }
+}
+
 fn my_layout(cx: Scope) -> Element {
     use_shared_state_provider(cx, || DialogState::Hidden);
+
+    use_shared_state_provider(cx, || FilterSecret::new());
+    use_shared_state_provider(cx, || FilterTemplate::new());
+
+    use_shared_state_provider(cx, || CloudFlareRecordsState::new());
 
     render! {
         div { id: "layout",
