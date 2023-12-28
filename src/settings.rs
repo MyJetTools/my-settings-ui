@@ -13,6 +13,10 @@ impl SettingsModel {
     pub fn get_cloud_flare_url(&self) -> String {
         read_env_variable("CLOUD_FLARE_URL")
     }
+
+    pub fn get_nginx_api(&self) -> String {
+        read_env_variable("NGINX_API")
+    }
 }
 
 #[async_trait::async_trait]

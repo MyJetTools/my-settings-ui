@@ -35,14 +35,14 @@ impl DomainsGrpcClient {
     pub async fn save(
         product_name: String,
         is_cloud_flare_proxy: bool,
-        internal_domain_name: String,
+        nginx_config: Option<NginxConfigGrpcModel>,
     ) -> Result<(), String> {
         let result = APP_CTX
             .domains_grpc_client
             .set_product_info(DomainProductGrpcInfo {
                 product_name,
                 is_cloud_flare_proxy,
-                internal_domain_name,
+                nginx_config,
             })
             .await;
 

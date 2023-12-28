@@ -75,17 +75,23 @@ pub fn render_dialog(cx: Scope) -> Element {
 
                 DialogType::AddDomainProduct=>{
                     dialog_class = "modal-dialog-narrow";
-                    rsx! {edit_domain_product { add: true, name: "".to_string(), is_cloud_flare_proxy_pass: false, internal_domain_name: "".to_string() }}
+                    rsx! {EditDomainProduct { add: true, name: "".to_string(), is_cloud_flare_proxy_pass: false, nginx_config: "".to_string() }}
                 }
 
-                DialogType::EditDomainProduct { name, cloud_flare_proxy_pass, internal_domain_name }=>{
-                    dialog_class = "modal-dialog-narrow";
+                DialogType::EditDomainProduct { name, cloud_flare_proxy_pass, nginx_config }=>{
+                    
+                    let nginx_config = if let Some(nginx_config) = nginx_config.clone() {
+                        serde_json::to_string(nginx_config.as_ref()).unwrap()
+                    } else {
+                        "".to_string()
+                    };
+
                     rsx! {
-                        edit_domain_product {
+                        EditDomainProduct {
                             add: false,
                             name: name.clone(),
                             is_cloud_flare_proxy_pass: *cloud_flare_proxy_pass,
-                            internal_domain_name: internal_domain_name.clone()
+                            nginx_config: nginx_config
                         }
                     }
                 }

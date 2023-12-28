@@ -13,7 +13,7 @@ message DomainsInfoGrpcResponse{
 message DomainProductGrpcInfo{
    string ProductName = 1;
    bool IsCloudFlareProxy =2;
-   string InternalDomainName =3;
+   NginxConfigGrpcModel NginxConfig =3;
 }
 
 message SetDomainMaskRequest{
@@ -25,6 +25,17 @@ message DeleteDomainProductInfoRequest{
    string ProductName = 2;
 }
 
+message NginxConfigGrpcModel{
+   optional string ProtectedWithCa = 1;
+   optional string Template = 2;
+   repeated NginxRouteGrpcModel Routes = 3;
+}
+
+message NginxRouteGrpcModel{
+   string Path = 1;
+   string ProxyTo = 2;
+   optional string Template = 3;
+}
 
 service Domains {
     rpc GetDomainsInfo(google.protobuf.Empty) returns (DomainsInfoGrpcResponse);

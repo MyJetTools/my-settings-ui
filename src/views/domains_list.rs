@@ -70,7 +70,6 @@ pub fn domains_list(cx: Scope) -> Element {
     let products = widget_state_value.products.iter().map(|itm| {
         let name = itm.name.clone();
         let cloud_flare_proxy_pass = itm.is_cloud_flare_proxy_pass;
-        let internal_domain_name = itm.internal_domain_name.clone();
 
         let product_domain_name = Rc::new(domain_mask.replace("*", &itm.name));
 
@@ -78,12 +77,61 @@ pub fn domains_list(cx: Scope) -> Element {
 
         let lb_ip = lb_ip.clone();
 
+        let nginx_config = if let Some(nginx) = itm.nginx.clone() {
+            Some(Rc::new(nginx))
+        } else {
+            None
+        };
+
+        let nginx = if let Some(nginx_config) = itm.nginx.as_ref() {
+            let ca = if let Some(ca) = nginx_config.ca.as_ref() {
+                rsx!(
+                    div { style: "padding: 0;", div { class: "badge text-bg-success", "Protected with CA {ca}" } }
+                )
+            } else {
+                rsx! {
+                    div { style: "padding: 0;", div { class: "badge text-bg-light", "No CA" } }
+                }
+            };
+
+            let templates = if let Some(template) = nginx_config.template.as_ref() {
+                rsx!(
+                    div { style: "padding: 0;", div { class: "badge text-bg-primary", "Template: {template}" } }
+                )
+            } else {
+                rsx! {
+                    div { style: "padding: 0;", div { class: "badge text-bg-warning", "No global templates" } }
+                }
+            };
+
+            let routes = nginx_config.routes.iter().map(|route| {
+
+                let template = if let Some(template) = route.template.as_ref() {
+                    format!("+ Template: {}" , template)
+                } else {
+                    format!("")
+                };
+
+                rsx! {
+                    div { style: "padding: 0;",
+                        div { class: "badge text-bg-dark", "'{route.path}' -> '{route.proxy_to}' {template}" }
+                    }
+                }
+            });
+
+            rsx! { ca, templates, routes }
+        } else {
+            rsx! {
+                div { style: "padding: 0;", div { class: "badge text-bg-danger", "No nginx config found" } }
+            }
+        };
+
         rsx! {
             tr { style: "border-bottom: 1px solid lightgray; text-align: left;",
 
                 td { "{product_domain_name.as_str()}" }
                 td { ProxyPassIcon { proxy_pass: proxy_pass, height: 32 } }
-                td { "{itm.internal_domain_name}" }
+                td { nginx }
                 td { RenderCloudFlareStatus {
                     domain: product_domain_name.clone(),
                     ip: lb_ip.clone(),
@@ -102,7 +150,7 @@ pub fn domains_list(cx: Scope) -> Element {
                                         DialogType::EditDomainProduct {
                                             name: name.clone(),
                                             cloud_flare_proxy_pass,
-                                            internal_domain_name: internal_domain_name.clone(),
+                                            nginx_config: nginx_config.clone(),
                                         },
                                     );
                             },
@@ -119,7 +167,7 @@ pub fn domains_list(cx: Scope) -> Element {
             tr { style: "border-bottom: 1px solid lightgray; text-align: left;",
                 th { "Domain name" }
                 th { "Cloud flare proxy pass" }
-                th { "Internal domain name" }
+                th { "Nginx config" }
                 th { "Cloudflare status" }
                 th {
                     div { add_btn }
@@ -170,7 +218,7 @@ fn RenderCloudFlareStatus(cx: Scope, domain: Rc<String>, ip: Rc<String>, proxied
     let domains_state = domains_state.get_value();
 
     if domains_state.is_none() {
-        return render! { div { class: "alert alert-warning", "Loading Cloudfalre info..." } };
+        return render! { div { class: "alert alert-warning", "Loading Cloudflare info..." } };
     }
 
     let domains_state = domains_state.as_ref().unwrap();
@@ -235,7 +283,21 @@ pub struct DomainsApiModel {
 pub struct DomainProduct {
     pub name: String,
     pub is_cloud_flare_proxy_pass: bool,
-    pub internal_domain_name: String,
+    pub nginx: Option<NginxConfigHttpModel>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct NginxConfigHttpModel {
+    pub ca: Option<String>,
+    pub template: Option<String>,
+    pub routes: Vec<NginxRouteHttpModel>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct NginxRouteHttpModel {
+    pub path: String,
+    pub proxy_to: String,
+    pub template: Option<String>,
 }
 
 #[server]
@@ -252,7 +314,25 @@ pub async fn load_domains() -> Result<DomainsApiModel, ServerFnError> {
             .map(|itm| DomainProduct {
                 name: itm.product_name,
                 is_cloud_flare_proxy_pass: itm.is_cloud_flare_proxy,
-                internal_domain_name: itm.internal_domain_name,
+                nginx: if let Some(nginx) = itm.nginx_config {
+                    let result = NginxConfigHttpModel {
+                        ca: nginx.protected_with_ca,
+                        template: nginx.template,
+                        routes: nginx
+                            .routes
+                            .into_iter()
+                            .map(|route| NginxRouteHttpModel {
+                                path: route.path,
+                                proxy_to: route.proxy_to,
+                                template: route.template,
+                            })
+                            .collect(),
+                    };
+
+                    Some(result)
+                } else {
+                    None
+                },
             })
             .collect(),
         lb_ip,

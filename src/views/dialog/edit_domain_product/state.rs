@@ -1,25 +1,21 @@
-use super::EditDomainProductProps;
-
 pub struct EditDomainProductState {
     add: bool,
     pub product_name_init: String,
     pub product_name: String,
     pub is_cloud_flare_proxy_init: bool,
     pub is_cloud_flare_proxy: bool,
-    pub internal_domain_name_init: String,
-    pub internal_domain_name: String,
+    pub nginx_config_has_changes: bool,
 }
 
 impl EditDomainProductState {
-    pub fn new(src: &EditDomainProductProps) -> Self {
+    pub fn new(add: bool, cloud_flare_proxy_pass: bool, product_name: &str) -> Self {
         Self {
-            add: src.add,
-            product_name_init: src.name.to_string(),
-            product_name: src.name.to_string(),
-            is_cloud_flare_proxy: src.is_cloud_flare_proxy_pass,
-            is_cloud_flare_proxy_init: src.is_cloud_flare_proxy_pass,
-            internal_domain_name_init: src.internal_domain_name.to_string(),
-            internal_domain_name: src.internal_domain_name.to_string(),
+            add: add,
+            product_name_init: product_name.to_string(),
+            product_name: product_name.to_string(),
+            is_cloud_flare_proxy: cloud_flare_proxy_pass,
+            is_cloud_flare_proxy_init: cloud_flare_proxy_pass,
+            nginx_config_has_changes: false,
         }
     }
 
@@ -27,16 +23,12 @@ impl EditDomainProductState {
         self.product_name.as_str()
     }
 
-    pub fn get_internal_domain_name(&self) -> &str {
-        self.internal_domain_name.as_str()
-    }
-
     pub fn set_product_name(&mut self, product_name: &str) {
         self.product_name = product_name.to_string();
     }
 
-    pub fn set_internal_domain_name(&mut self, value: &str) {
-        self.internal_domain_name = value.to_string();
+    pub fn set_nginx_config_has_changes(&mut self) {
+        self.nginx_config_has_changes = true;
     }
 
     pub fn can_be_saved(&self) -> bool {
@@ -44,16 +36,15 @@ impl EditDomainProductState {
             return false;
         }
 
-        if self.internal_domain_name.len() == 0 {
+        if !self.nginx_config_has_changes {
             return false;
         }
 
         if self.add {
-            self.product_name_init != self.product_name
-                || self.internal_domain_name_init != self.internal_domain_name
+            self.product_name_init != self.product_name || self.nginx_config_has_changes
         } else {
             self.product_name_init != self.product_name
-                || self.internal_domain_name_init != self.internal_domain_name
+                || self.nginx_config_has_changes
                 || self.is_cloud_flare_proxy_init != self.is_cloud_flare_proxy
         }
     }

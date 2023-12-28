@@ -1,5 +1,7 @@
 use std::rc::Rc;
 
+use crate::views::NginxConfigHttpModel;
+
 pub enum DialogType {
     ShowSecret(String),
     AddSecret,
@@ -31,7 +33,7 @@ pub enum DialogType {
     EditDomainProduct {
         name: String,
         cloud_flare_proxy_pass: bool,
-        internal_domain_name: String,
+        nginx_config: Option<Rc<NginxConfigHttpModel>>,
     },
 
     EditDomainMask(String),

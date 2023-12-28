@@ -19,7 +19,6 @@ ssr = [
     "prost-types",
     "futures",
     "lazy_static",
-    "serde_json",
     "serde_yaml",
     "flurl",
 ]
@@ -50,7 +49,7 @@ chrono = "*"
 
 
 tokio = { version = "*", features = ["full"], optional = true }
-serde_json = { version = "*", optional = true }
+serde_json = { version = "*" }
 serde_yaml = { version = "*", optional = true }
 futures = { version = "*", optional = true }
 tonic = { version = "*", features = [
