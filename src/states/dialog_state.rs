@@ -39,6 +39,8 @@ pub enum DialogType {
     EditCfDomainRecord {
         domain: Rc<String>,
         proxied: bool,
+        lb_ip: Rc<String>,
+        cf_record_id: Option<String>,
     },
 }
 

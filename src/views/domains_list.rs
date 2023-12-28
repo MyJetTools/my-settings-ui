@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use dioxus::{html::GlobalAttributes, prelude::*};
 use dioxus_fullstack::prelude::*;
+use rust_extensions::StrOrString;
 use serde::*;
 
 use crate::{
@@ -65,6 +66,7 @@ pub fn domains_list(cx: Scope) -> Element {
         ("", rsx! {div{}})
     };
 
+    let lb_ip = Rc::new(widget_state_value.lb_ip.clone());
     let products = widget_state_value.products.iter().map(|itm| {
         let name = itm.name.clone();
         let cloud_flare_proxy_pass = itm.is_cloud_flare_proxy_pass;
@@ -74,19 +76,19 @@ pub fn domains_list(cx: Scope) -> Element {
 
         let proxy_pass = itm.is_cloud_flare_proxy_pass;
 
+        let lb_ip = lb_ip.clone();
+
         rsx! {
             tr { style: "border-bottom: 1px solid lightgray; text-align: left;",
 
                 td { "{product_domain_name.as_str()}" }
                 td { ProxyPassIcon { proxy_pass: proxy_pass, height: 32 } }
                 td { "{itm.internal_domain_name}" }
-                td {
-                    RenderCloudFlareStatus {
-                        domain: product_domain_name.clone(),
-                        ip: "127.0.0.1".to_string(),
-                        proxied: proxy_pass
-                    }
-                }
+                td { RenderCloudFlareStatus {
+                    domain: product_domain_name.clone(),
+                    ip: lb_ip.clone(),
+                    proxied: proxy_pass
+                } }
                 td {
                     div { class: "btn-group",
                         button {
@@ -130,7 +132,7 @@ pub fn domains_list(cx: Scope) -> Element {
     let domain_mask_to_edit = domain_mask.to_string();
 
     render! {
-        table {
+        table { style: "width:100%",
             tr {
                 td { "Domain mask is: " }
                 td { input { class: "form-control", value: "{domain_mask}", readonly: domain_mask_read_only } }
@@ -149,6 +151,7 @@ pub fn domains_list(cx: Scope) -> Element {
                         "Edit"
                     }
                 }
+                td { style: "width: 50%;text-align: right;", "Load balancer ip is: {lb_ip.as_ref()}" }
             }
         }
 
@@ -159,7 +162,7 @@ pub fn domains_list(cx: Scope) -> Element {
 }
 
 #[component]
-fn RenderCloudFlareStatus(cx: Scope, domain: Rc<String>, ip: String, proxied: bool) -> Element {
+fn RenderCloudFlareStatus(cx: Scope, domain: Rc<String>, ip: Rc<String>, proxied: bool) -> Element {
     let domains_state = use_shared_state::<CloudFlareRecordsState>(cx).unwrap();
 
     let domains_state = domains_state.read();
@@ -172,17 +175,27 @@ fn RenderCloudFlareStatus(cx: Scope, domain: Rc<String>, ip: String, proxied: bo
 
     let domains_state = domains_state.as_ref().unwrap();
 
+    let mut cf_record_id = None;
+
     let result = match domains_state.get(domain.as_ref()) {
         Some(value) => {
             if value.tp != "A" {
-                Some("Not A-record")
-            } else if &value.content != ip {
-                Some("Invalid IP")
+                cf_record_id = Some(value.id.clone());
+                Some(StrOrString::create_as_string(format!(
+                    "Must be A-record. Found: {}",
+                    value.tp
+                )))
+            } else if &value.content != ip.as_ref() {
+                cf_record_id = Some(value.id.clone());
+                Some(StrOrString::create_as_string(format!(
+                    "Invalid IP: {}",
+                    value.content
+                )))
             } else {
                 None
             }
         }
-        None => Some("No Cloudflare record found"),
+        None => Some(StrOrString::create_as_str("No Cloudflare record found")),
     };
 
     match result {
@@ -199,10 +212,12 @@ fn RenderCloudFlareStatus(cx: Scope, domain: Rc<String>, ip: String, proxied: bo
                                 DialogType::EditCfDomainRecord {
                                     domain: domain.clone(),
                                     proxied: *proxied,
+                                    lb_ip: ip.clone(),
+                                    cf_record_id: cf_record_id.clone(),
                                 },
                             );
                     },
-                    "{err}"
+                    "{err.as_str()}"
                 }
             }
         },
@@ -214,6 +229,7 @@ fn RenderCloudFlareStatus(cx: Scope, domain: Rc<String>, ip: String, proxied: bo
 pub struct DomainsApiModel {
     pub domain_mask: Option<String>,
     pub products: Vec<DomainProduct>,
+    pub lb_ip: String,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DomainProduct {
@@ -226,6 +242,8 @@ pub struct DomainProduct {
 pub async fn load_domains() -> Result<DomainsApiModel, ServerFnError> {
     let response = crate::grpc_client::DomainsGrpcClient::get().await.unwrap();
 
+    let lb_ip = get_lb_ip().await;
+
     let result = DomainsApiModel {
         domain_mask: response.domain_mask,
         products: response
@@ -237,6 +255,7 @@ pub async fn load_domains() -> Result<DomainsApiModel, ServerFnError> {
                 internal_domain_name: itm.internal_domain_name,
             })
             .collect(),
+        lb_ip,
     };
 
     Ok(result)
@@ -266,4 +285,20 @@ pub struct CfRecordRestApiModel {
     pub tp: String,
     pub content: String,
     pub proxied: bool,
+}
+
+#[cfg(feature = "ssr")]
+async fn get_lb_ip() -> String {
+    let cloud_flare_url = crate::APP_CTX.settings.get_cloud_flare_url();
+
+    let response = flurl::FlUrl::new(cloud_flare_url)
+        .append_path_segment("api")
+        .append_path_segment("InternetIp")
+        .get()
+        .await
+        .unwrap();
+
+    let ip = response.receive_body().await.unwrap();
+
+    String::from_utf8(ip).unwrap()
 }

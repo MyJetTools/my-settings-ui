@@ -22,6 +22,10 @@ pub fn ok_button_icon(cx: Scope) -> Element {
     cx.render(rsx! { Icon { width: 16, height: 16, fill: "white", icon: BsCheck } })
 }
 
+pub fn wait_button_icon(cx: Scope) -> Element {
+    cx.render(rsx! { Icon { width: 16, height: 16, fill: "white", icon: BsHourglass } })
+}
+
 pub fn cancel_button_icon(cx: Scope) -> Element {
     cx.render(rsx! { Icon { width: 16, height: 16, fill: "white", icon: BsX } })
 }

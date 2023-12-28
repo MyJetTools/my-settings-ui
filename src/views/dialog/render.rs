@@ -90,9 +90,17 @@ pub fn render_dialog(cx: Scope) -> Element {
                     }
                 }
 
-                DialogType::EditCfDomainRecord{domain, proxied}=>{
+                DialogType::EditCfDomainRecord{domain, proxied, lb_ip, cf_record_id}=>{
                     dialog_class = "modal-dialog-narrow";
-                    rsx! { EditCfRecord { domain: domain.clone(), proxied: *proxied } }
+                    let cf_record_id = if let Some(id) = cf_record_id.clone() { id.to_string() } else { "".to_string() };
+                    rsx! {
+                        EditCfRecord {
+                            domain: domain.clone(),
+                            proxied: *proxied,
+                            lb_ip: lb_ip.to_string(),
+                            cf_record_id: cf_record_id
+                        }
+                    }
                 }
             };
 

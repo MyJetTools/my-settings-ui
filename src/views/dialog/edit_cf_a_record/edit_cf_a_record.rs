@@ -2,9 +2,10 @@ use std::rc::Rc;
 
 use dioxus::{html::GlobalAttributes, prelude::*};
 use dioxus_fullstack::prelude::*;
+use serde::*;
 
 use crate::{
-    states::DialogState,
+    states::{CloudFlareRecordsState, DialogState},
     views::{icons::*, *},
 };
 
@@ -15,24 +16,33 @@ pub struct EditCfARecordProps {
 }
 
 #[component]
-pub fn EditCfRecord(cx: Scope, domain: Rc<String>, proxied: bool) -> Element {
-    let ip_state: &UseState<Option<String>> = use_state(cx, || None);
+pub fn EditCfRecord(
+    cx: Scope,
+    domain: Rc<String>,
+    proxied: bool,
+    lb_ip: String,
+    cf_record_id: String,
+) -> Element {
+    let ip_state = use_state(cx, || lb_ip.to_string());
 
-    let ip_state_value = match ip_state.get() {
-        Some(value) => value.as_str(),
-        None => {
-            let ip_state = ip_state.to_owned();
+    let ip_state_value = ip_state.get().as_str();
 
-            cx.spawn(async move {
-                let ip = get_lb_ip().await.unwrap();
-                ip_state.set(Some(ip));
-            });
+    let req_is_being_processed = use_state(cx, || false);
 
-            ""
-        }
+    let save_icon = if *req_is_being_processed.get() {
+        rsx! { wait_button_icon {} }
+    } else {
+        rsx! { ok_button_icon {} }
+    };
+
+    let cf_rec_id_content = if cf_record_id.len() > 0 {
+        rsx! { div { "{cf_record_id}" } }
+    } else {
+        rsx! { div {} }
     };
 
     render! {
+        cf_rec_id_content,
         div {
             table { style: "width:100%",
                 tr {
@@ -49,7 +59,7 @@ pub fn EditCfRecord(cx: Scope, domain: Rc<String>, proxied: bool) -> Element {
                     class: "form-control",
                     value: "{ip_state_value}",
                     oninput: move |cx| {
-                        ip_state.set(Some(cx.value.to_string()));
+                        ip_state.set(cx.value.to_string());
                     }
                 }
                 label { "Ip" }
@@ -58,16 +68,35 @@ pub fn EditCfRecord(cx: Scope, domain: Rc<String>, proxied: bool) -> Element {
 
         div { class: "modal-footer",
             div { class: "btn-group",
-                button { class: "btn btn-primary", onclick: move |_| {},
+                button {
+                    class: "btn btn-primary",
+                    disabled: *req_is_being_processed.get(),
+                    onclick: move |_| {
+                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap().to_owned();
+                        let cf_records_state = use_shared_state::<CloudFlareRecordsState>(cx)
+                            .unwrap()
+                            .to_owned();
+                        let ip = lb_ip.to_string();
+                        let id = cf_record_id.to_string();
+                        let proxied = *proxied;
+                        let domain = domain.to_string();
+                        req_is_being_processed.set(true);
+                        cx.spawn(async move {
+                            let _ = set_dns_record(domain, id, ip, proxied).await;
+                            cf_records_state.write().reset_value();
+                            dialog_state.write().hide_dialog();
+                        });
+                    },
                     ok_button_icon {}
                     "Save"
                 }
                 button {
                     class: "btn btn-outline-dark",
                     onclick: move |_| {
-                        use_shared_state::<DialogState>(cx).unwrap().write().hide_dialog();
+                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
+                        dialog_state.write().hide_dialog();
                     },
-                    cancel_button_icon {}
+                    save_icon,
                     "Cancel"
                 }
             }
@@ -76,17 +105,45 @@ pub fn EditCfRecord(cx: Scope, domain: Rc<String>, proxied: bool) -> Element {
 }
 
 #[server]
-async fn get_lb_ip<'s>() -> Result<String, ServerFnError> {
-    let cloud_flare_url = crate::APP_CTX.settings.get_cloud_flare_url();
+async fn set_dns_record(
+    domain: String,
+    id: String,
+    ip: String,
+    proxied: bool,
+) -> Result<(), ServerFnError> {
+    let domain_root = crate::utils::extract_domain_name(&domain);
+    let cloud_flare_bridge_url = crate::APP_CTX.settings.get_cloud_flare_url();
 
-    let response = flurl::FlUrl::new(cloud_flare_url)
+    if id.len() > 0 {
+        flurl::FlUrl::new(cloud_flare_bridge_url.as_str())
+            .append_path_segment("api")
+            .append_path_segment("DnsZone")
+            .append_path_segment("ARecord")
+            .append_query_param("domain", Some(domain_root))
+            .append_query_param("id", Some(id))
+            .delete()
+            .await
+            .unwrap();
+    }
+
+    flurl::FlUrl::new(cloud_flare_bridge_url)
         .append_path_segment("api")
-        .append_path_segment("InternetIp")
-        .get()
+        .append_path_segment("DnsZone")
+        .append_path_segment("ARecord")
+        .post_json(CreateARecordRequest {
+            domain,
+            proxied,
+            ip,
+        })
         .await
         .unwrap();
 
-    let ip = response.receive_body().await.unwrap();
+    Ok(())
+}
 
-    Ok(String::from_utf8(ip).unwrap())
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CreateARecordRequest {
+    pub domain: String,
+    pub proxied: bool,
+    pub ip: String,
 }
