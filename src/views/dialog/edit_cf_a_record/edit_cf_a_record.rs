@@ -2,7 +2,6 @@ use std::rc::Rc;
 
 use dioxus::{html::GlobalAttributes, prelude::*};
 use dioxus_fullstack::prelude::*;
-use serde::*;
 
 use crate::{
     states::{CloudFlareRecordsState, DialogState},
@@ -111,39 +110,13 @@ async fn set_dns_record(
     ip: String,
     proxied: bool,
 ) -> Result<(), ServerFnError> {
-    let domain_root = crate::utils::extract_domain_name(&domain);
-    let cloud_flare_bridge_url = crate::APP_CTX.settings.get_cloud_flare_url();
+    let domain_zone = crate::utils::extract_domain_name(&domain);
 
     if id.len() > 0 {
-        flurl::FlUrl::new(cloud_flare_bridge_url.as_str())
-            .append_path_segment("api")
-            .append_path_segment("DnsZone")
-            .append_path_segment("ARecord")
-            .append_query_param("domain", Some(domain_root))
-            .append_query_param("id", Some(id))
-            .delete()
-            .await
-            .unwrap();
+        crate::cf_http_client::delete_dns_record(domain_zone, id.as_str()).await;
     }
 
-    flurl::FlUrl::new(cloud_flare_bridge_url)
-        .append_path_segment("api")
-        .append_path_segment("DnsZone")
-        .append_path_segment("ARecord")
-        .post_json(CreateARecordRequest {
-            domain,
-            proxied,
-            ip,
-        })
-        .await
-        .unwrap();
+    crate::cf_http_client::create_a_record(domain, proxied, ip).await;
 
     Ok(())
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct CreateARecordRequest {
-    pub domain: String,
-    pub proxied: bool,
-    pub ip: String,
 }

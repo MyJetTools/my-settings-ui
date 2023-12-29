@@ -55,12 +55,12 @@ pub fn EditDomainProduct(
         let entered_routes: &UseRef<BTreeMap<String, NginxRoute>> = use_ref(cx, || {
             let mut result = BTreeMap::new();
 
-            for itm in data.routes {
+            for (path, route) in data.routes {
                 result.insert(
-                    itm.path,
+                    path,
                     NginxRoute {
-                        proxy_to: itm.proxy_to,
-                        template: itm.template.unwrap_or("".to_string()),
+                        proxy_to: route.proxy_to,
+                        template: route.template.unwrap_or("".to_string()),
                     },
                 );
             }
@@ -121,14 +121,14 @@ pub fn EditDomainProduct(
 
     let entered_routes_table = {
         let values = entered_routes.read().clone();
-        values.into_iter().map(|(key, value)| {
-        let key = Rc::new(key);
+        values.into_iter().map(|itm| {
+        let key = Rc::new(itm.0);
         let key_delete = key.clone();
         rsx! {
             tr {
                 td { "{key}" }
-                td { "{value.proxy_to}" }
-                td { "{value.template}" }
+                td { "{itm.1.proxy_to}" }
+                td { "{itm.1.template}" }
                 td {
                     button {
                         class: "btn btn-outline-dark btn-sm",
@@ -343,18 +343,20 @@ fn compile_nginx_config(
         return None;
     }
 
-    let routes: Vec<_> = entered_routes
+    let routes: BTreeMap<String, _> = entered_routes
         .iter()
         .map(|(key, value)| {
-            let result = NginxRouteHttpModel {
-                path: key.to_string(),
-                proxy_to: value.proxy_to.clone(),
-                template: if value.template.as_str().is_empty() {
-                    None
-                } else {
-                    Some(value.template.clone())
+            let result = (
+                key.to_string(),
+                NginxRouteHttpModel {
+                    proxy_to: value.proxy_to.clone(),
+                    template: if value.template.as_str().is_empty() {
+                        None
+                    } else {
+                        Some(value.template.clone())
+                    },
                 },
-            };
+            );
             result
         })
         .collect();
@@ -390,9 +392,9 @@ async fn save_domain_product<'s>(
                 .routes
                 .into_iter()
                 .map(|route| crate::domains_grpc::NginxRouteGrpcModel {
-                    path: route.path,
-                    proxy_to: route.proxy_to,
-                    template: route.template,
+                    path: route.0,
+                    proxy_to: route.1.proxy_to,
+                    template: route.1.template,
                 })
                 .collect(),
         };

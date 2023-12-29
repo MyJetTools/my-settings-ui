@@ -7,9 +7,13 @@ use dioxus_fullstack::prelude::*;
 use router::AppRoute;
 #[cfg(feature = "ssr")]
 mod app_ctx;
+
+mod cf_http_client;
 #[cfg(feature = "ssr")]
 mod grpc_client;
 
+#[cfg(feature = "ssr")]
+mod nginx_http_client;
 mod router;
 #[cfg(feature = "ssr")]
 mod settings;

@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use crate::views::CfRecordRestApiModel;
+use crate::cf_http_client::CfDnsRecordRestApiModel;
 
 pub struct CloudFlareRecordsState {
-    values: Option<HashMap<String, CfRecordRestApiModel>>,
+    values: Option<HashMap<String, CfDnsRecordRestApiModel>>,
 }
 
 impl CloudFlareRecordsState {
@@ -11,11 +11,11 @@ impl CloudFlareRecordsState {
         Self { values: None }
     }
 
-    pub fn get_value(&self) -> Option<&HashMap<String, CfRecordRestApiModel>> {
+    pub fn get_value(&self) -> Option<&HashMap<String, CfDnsRecordRestApiModel>> {
         self.values.as_ref()
     }
 
-    pub fn set_value(&mut self, value: Vec<CfRecordRestApiModel>) {
+    pub fn set_value(&mut self, value: Vec<CfDnsRecordRestApiModel>) {
         let value = value
             .into_iter()
             .map(|itm| (itm.name.to_lowercase(), itm))
