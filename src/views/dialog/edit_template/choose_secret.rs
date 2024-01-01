@@ -172,68 +172,6 @@ pub fn choose_secret<'s>(cx: Scope<'s, ChooseSecretProps<'s>>) -> Element {
     }
 }
 
-/*
-fn load_secrets<'s>(
-    cx: &Scope<'s, ChooseSecretProps<'s>>,
-    secrets: &UseState<Option<Vec<SecretListItem>>>,
-) {
-    let secrets = secrets.to_owned();
-    cx.spawn(async move {
-        let secrets_values = crate::grpc_client::SecretsGrpcClient::get_all_secrets()
-            .await
-            .unwrap();
-
-        secrets.set(Some(secrets_values));
-    });
-}
- */
-
-/*
-fn add_secret<'s>(
-    cx: &Scoped<'s, ChooseSecretProps<'s>>,
-    mode: &UseState<ChooseSecretMode>,
-    secrets: &UseState<Option<Vec<SecretListItem>>>,
-    name: &str,
-    value: &str,
-    level: i32,
-) {
-    let name = name.to_string();
-    let value = value.to_string();
-
-    let mode = mode.to_owned();
-
-    let secrets = secrets.to_owned();
-
-    cx.spawn(async move {
-        crate::grpc_client::SecretsGrpcClient::save_secret(name.clone(), value, level)
-            .await
-            .unwrap();
-
-        mode.set(ChooseSecretMode::Select);
-        secrets.set(None);
-    })
-}
-
-fn copy_secret_value<'s>(
-    cx: &Scoped<'s, ChooseSecretProps<'s>>,
-    secret_name: &str,
-    secret_value: &UseState<String>,
-) {
-    let secret_name = secret_name.to_string();
-    let secret_value = secret_value.to_owned();
-
-    cx.spawn(async move {
-        let secret_model = crate::grpc_client::SecretsGrpcClient::get_secret(secret_name.clone())
-            .await
-            .unwrap();
-
-        if secret_model.name.len() > 0 {
-            secret_value.set(secret_model.value);
-        }
-    });
-}
- */
-
 pub enum ChooseSecretMode {
     Select,
     Add,

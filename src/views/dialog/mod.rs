@@ -22,3 +22,5 @@ mod edit_domain_mask;
 pub use edit_domain_mask::*;
 mod edit_cf_a_record;
 pub use edit_cf_a_record::*;
+mod sync_nginx;
+pub use sync_nginx::*;

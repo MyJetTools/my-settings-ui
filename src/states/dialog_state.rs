@@ -44,6 +44,11 @@ pub enum DialogType {
         lb_ip: Rc<String>,
         cf_record_id: Option<String>,
     },
+
+    SyncNginx {
+        domain: Rc<String>,
+        config: Rc<String>,
+    },
 }
 
 pub enum DialogState {

@@ -74,6 +74,8 @@ pub fn domains_list(cx: Scope) -> Element {
 
         let product_domain_name = Rc::new(domain_mask.replace("*", &itm.name));
 
+        let product_domain_name_nginx_sync = product_domain_name.clone();
+
         let proxy_pass = itm.is_cloud_flare_proxy_pass;
 
         let lb_ip = lb_ip.clone();
@@ -90,6 +92,45 @@ pub fn domains_list(cx: Scope) -> Element {
             None
         };
 
+        let nginx_difference = if let Some(nginx_config) = nginx_config.as_ref() {
+            if let Some(nginx_setup) = nginx_setup.as_ref() {
+                nginx_config.is_same_to(nginx_setup)
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
+        let nginx_difference = if nginx_difference {
+            rsx! { div { class: "badge text-bg-success", "Nginx is ok" } }
+        } else {
+            if let Some(nginx_config) = nginx_config.as_ref() {
+                let config_as_str =
+                    Rc::new(serde_json::to_string_pretty(nginx_config.as_ref()).unwrap());
+                rsx! {
+                    button {
+                        class: "btn btn-danger",
+                        onclick: move |_| {
+                            let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
+                            dialog_state
+                                .write()
+                                .show_dialog(
+                                    "Sync nginx".to_string(),
+                                    DialogType::SyncNginx {
+                                        config: config_as_str.clone(),
+                                        domain: product_domain_name_nginx_sync.clone(),
+                                    },
+                                );
+                        },
+                        "Setup Nginx"
+                    }
+                }
+            } else {
+                rsx! { div { class: "badge text-bg-warning", "Nginx configuration missing" } }
+            }
+        };
+
         let cx_owned = cx.to_owned();
         let nginx_config_to_render = generate_nginx_configuration(cx_owned, nginx_config.clone());
 
@@ -102,11 +143,14 @@ pub fn domains_list(cx: Scope) -> Element {
                 td { ProxyPassIcon { proxy_pass: proxy_pass, height: 32 } }
                 td { nginx_config_to_render }
                 td { nginx_setup_to_render }
-                td { RenderCloudFlareStatus {
-                    domain: product_domain_name.clone(),
-                    ip: lb_ip.clone(),
-                    proxied: proxy_pass
-                } }
+                td {
+                    RenderCloudFlareStatus {
+                        domain: product_domain_name.clone(),
+                        ip: lb_ip.clone(),
+                        proxied: proxy_pass
+                    }
+                    div { nginx_difference }
+                }
                 td {
                     div { class: "btn-group",
                         button {
@@ -139,7 +183,7 @@ pub fn domains_list(cx: Scope) -> Element {
                 th { "Cloud flare proxy pass" }
                 th { "Nginx config" }
                 th { "Nginx setup" }
-                th { "Cloudflare status" }
+                th { "Infrastructure status" }
                 th {
                     div { add_btn }
                 }
@@ -240,7 +284,7 @@ fn RenderCloudFlareStatus(cx: Scope, domain: Rc<String>, ip: Rc<String>, proxied
                 }
             }
         },
-        None => render! { div { class: "badge bg-success", "OK" } },
+        None => render! { div { class: "badge bg-success", "Cloudflare OK" } },
     }
 }
 
@@ -312,6 +356,38 @@ pub struct NginxConfigHttpModel {
     pub ca: Option<String>,
     pub template: Option<String>,
     pub routes: BTreeMap<String, NginxRouteHttpModel>,
+}
+
+impl NginxConfigHttpModel {
+    pub fn is_same_to(&self, other: &Self) -> bool {
+        if self.ca != other.ca {
+            return false;
+        }
+
+        if self.template != other.template {
+            return false;
+        }
+
+        if self.routes.len() != other.routes.len() {
+            return false;
+        }
+
+        for (key, value) in self.routes.iter() {
+            if let Some(other_value) = other.routes.get(key) {
+                if value.proxy_to != other_value.proxy_to {
+                    return false;
+                }
+
+                if value.template != other_value.template {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
+        true
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

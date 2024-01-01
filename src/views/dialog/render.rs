@@ -19,6 +19,12 @@ pub fn render_dialog(cx: Scope) -> Element {
 
             let mut dialog_class = "modal-dialog";
             let dialog_content = match dialog_type {
+
+                DialogType::SyncNginx{domain, config} => {
+                    dialog_class = "modal-dialog-narrow";
+                    rsx! { SyncNginxConfiguration { domain: domain.clone(), config: config.clone() } }
+                }
+
                 DialogType::AddSecret => {
                     dialog_class = "modal-dialog-narrow";
                     rsx! { edit_secret { secret: "".to_string() } }
@@ -74,7 +80,6 @@ pub fn render_dialog(cx: Scope) -> Element {
                 }
 
                 DialogType::AddDomainProduct=>{
-                    dialog_class = "modal-dialog-narrow";
                     rsx! {EditDomainProduct { add: true, name: "".to_string(), is_cloud_flare_proxy_pass: false, nginx_config: "".to_string() }}
                 }
 
