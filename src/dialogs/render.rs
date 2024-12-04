@@ -45,9 +45,10 @@ pub fn RenderDialog() -> Element {
             env,
             name,
             init_from_other_template,
+            on_ok,
         } => {
             rsx! {
-                EditTemplate { env, name, init_from_other_template }
+                EditTemplate { env, name, init_from_other_template, on_ok }
             }
         }
 

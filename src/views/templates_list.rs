@@ -1,10 +1,11 @@
 use std::rc::Rc;
 
 use super::icons::*;
-use crate::states::*;
+use crate::{states::*, ui_utils::ToastType};
 use dioxus::prelude::*;
 
 
+use dioxus_utils::DataState;
 use serde::*;
 use crate::dialogs::*;
 
@@ -15,22 +16,46 @@ pub fn TemplatesList() -> Element {
 
     let main_state_read_access = main_state.read();
 
-    let mut filter = use_signal(||FilterTemplate::new());
+    let mut filter_template = consume_context::<Signal<FilterTemplate>>();
+    let filter_template_read_access = filter_template.read();
 
-    let value_to_filter = filter.read();
-    let value_to_filter = value_to_filter.as_str();
 
-    match main_state_read_access.unwrap_as_templates() {
-        Some(templates) => {
-            let last_edited = get_last_edited(templates);
-            let templates = templates.iter().filter(|itm|{
-                if value_to_filter.len() == 0 {
-                    return true;
+    let templates = match &main_state_read_access.templates{
+    dioxus_utils::DataState::None => {
+        spawn(async move {
+            main_state.write().templates = dioxus_utils::DataState::Loading;
+            match load_templates().await{
+                Ok(templates)=>{
+                    main_state.write().templates = dioxus_utils::DataState::Loaded(templates);
                 }
+                Err(err)=>{
+                    main_state.write().templates = dioxus_utils::DataState::Error(err.to_string());
+                }
+            }
+            
+        });
 
-                itm.name.to_lowercase().contains(&value_to_filter)
+        return rsx! {
+            LoadingIcon {}
+        }
+    },
+   DataState::Loading =>{
+        return rsx! {
+            LoadingIcon {}
+        }
+    },
+    DataState::Loaded(result) => result,
+    DataState::Error(err) => 
+        return rsx!{
+            {err.as_str()}
+        }
+    };
 
-            }).map(|itm| {
+
+
+
+            let last_edited = get_last_edited(templates);
+            let templates = templates.iter().filter(|itm|filter_template_read_access.filter_record(itm)).map(|itm| {
                 let last_request = if itm.last_requests == 0 {
                     "".to_string()
                 } else {
@@ -111,6 +136,9 @@ pub fn TemplatesList() -> Element {
                                                 env,
                                                 name,
                                                 init_from_other_template: None,
+                                                on_ok: EventHandler::new(move |result| {
+                                                    exec_save_template(result);
+                                                }),
                                             });
                                     },
                                     EditIcon {}
@@ -126,6 +154,9 @@ pub fn TemplatesList() -> Element {
                                                 env: String::new().into(),
                                                 name: String::new().into(),
                                                 init_from_other_template: Some((init_env, init_name)),
+                                                on_ok: EventHandler::new(move |result| {
+                                                    exec_save_template(result);
+                                                }),
                                             });
                                     },
                                     CopyFromIcon {}
@@ -143,16 +174,7 @@ pub fn TemplatesList() -> Element {
                                                     delete_template_name.as_str(),
                                                 ),
                                                 on_ok: EventHandler::new(move |_| {
-                                                    let env = env.clone();
-                                                    let name = name.clone();
-                                                    spawn(async move {
-                                                        match delete_template(env.to_string(), name.to_string()).await {
-                                                            Ok(_) => {
-                                                                main_state.write().set_templates(None);
-                                                            }
-                                                            Err(_) => {}
-                                                        }
-                                                    });
+                                                    exec_delete_template(env.to_string(), name.to_string());
                                                 }),
                                             })
                                     },
@@ -163,6 +185,7 @@ pub fn TemplatesList() -> Element {
                     }
                 }
             });
+
             rsx! {
                 table { class: "table table-striped", style: "text-align: left;",
                     thead {
@@ -179,10 +202,9 @@ pub fn TemplatesList() -> Element {
                                                 span { class: "input-group-text", SearchIcon {} }
                                                 input {
                                                     class: "form-control form-control-sm",
-                                                    value: "{value_to_filter}",
+                                                    value: filter_template_read_access.as_str(),
                                                     oninput: move |cx| {
-                                                        let mut filter = filter.write();
-                                                        filter.set_value(cx.value().as_str());
+                                                        filter_template.write().set_value(cx.value().as_str());
                                                     }
                                                 }
                                             }
@@ -204,6 +226,9 @@ pub fn TemplatesList() -> Element {
                                                     env: String::new().into(),
                                                     name: String::new().into(),
                                                     init_from_other_template: None,
+                                                    on_ok: EventHandler::new(move |result| {
+                                                        exec_save_template(result);
+                                                    }),
                                                 });
                                         },
                                         AddIcon {}
@@ -216,19 +241,40 @@ pub fn TemplatesList() -> Element {
                     tbody { {templates.into_iter()} }
                 }
             }
-        }
-        None => {
 
-            spawn(async move {
-                let response = load_templates().await.unwrap();
-                main_state.write().set_templates(Some(response));
-            });
+}
 
-            rsx! {
-                LoadingIcon {}
-            }
+
+fn exec_save_template(save_template_result : SaveTemplateResult){
+    spawn(async move{
+        match save_template(save_template_result.env, save_template_result.name, save_template_result.yaml).await{
+            Ok(_) => {
+                consume_context::<Signal<DialogState>>().set(DialogState::None);
+                consume_context::<Signal<MainState>>().write().drop_data();
+                crate::ui_utils::show_toast("Template is saved", ToastType::Info);
+            },
+            Err(_) =>{
+                crate::ui_utils::show_toast("Error saving templated", ToastType::Error);
+            },
         }
-    }
+
+    });
+}
+
+fn exec_delete_template(env: String, name: String){
+    spawn(async move{
+        match delete_template(env, name).await{
+            Ok(_) => {
+                consume_context::<Signal<DialogState>>().set(DialogState::None);
+                consume_context::<Signal<MainState>>().write().drop_data();
+                crate::ui_utils::show_toast("Template is deleted", ToastType::Info);
+            },
+            Err(_) =>{
+                crate::ui_utils::show_toast("Error deleting templated", ToastType::Error);
+            },
+        }
+
+    }); 
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -294,6 +340,16 @@ fn get_last_edited(templates: &Vec<TemplateApiModel>) -> (String, String) {
     }
 
     (env, name)
+}
+
+
+#[server]
+pub async fn save_template(env: String, name: String, yaml: String) -> Result<(), ServerFnError> {
+    crate::server::grpc_client::TemplatesGrpcClient::save_template(env, name, yaml)
+        .await
+        .unwrap();
+
+    Ok(())
 }
 
 

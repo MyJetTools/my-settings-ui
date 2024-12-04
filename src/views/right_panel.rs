@@ -8,21 +8,15 @@ pub fn RightPanel() -> Element {
 
     let main_state_read_access = main_state.read();
 
-    match *main_state_read_access {
-        MainState::Nothing => {
-            rsx!(
-                div {}
-            )
+    match main_state_read_access.location {
+        LocationState::None => {
+            rsx!(div {})
         }
-        MainState::Templates(_) => {
-            rsx!(
-                TemplatesList {}
-            )
+        LocationState::Templates => {
+            rsx!(TemplatesList {})
         }
-        MainState::Secrets(_) => {
-            rsx!(
-                SecretsList {}
-            )
+        LocationState::Secrets => {
+            rsx!(SecretsList {})
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::{states::MainState, AppRoute};
+use crate::{states::*, AppRoute};
 use dioxus::prelude::*;
 use dioxus_router::prelude::Link;
 
@@ -10,15 +10,17 @@ pub fn LeftPanel() -> Element {
 
     let main_state_read_access = main_state.read();
 
+    let current_location = main_state_read_access.location.clone();
+
     let mut secrets_active = "";
     let mut templates_active = "";
 
-    match &*main_state_read_access {
-        MainState::Nothing => {}
-        MainState::Templates(_) => {
+    match current_location {
+        LocationState::None => {}
+        LocationState::Templates => {
             templates_active = ACTIVE_CLASS;
         }
-        MainState::Secrets(_) => {
+        LocationState::Secrets => {
             secrets_active = ACTIVE_CLASS;
         }
     }
@@ -31,8 +33,8 @@ pub fn LeftPanel() -> Element {
                 Link {
                     to: AppRoute::Secrets,
                     onclick: move |_| {
-                        if !main_state.read().is_secrets() {
-                            main_state.write().set_secrets(None);
+                        if !current_location.is_secrets() {
+                            main_state.write().set_location(LocationState::Secrets);
                         }
                     },
                     "Secrets"
@@ -42,8 +44,8 @@ pub fn LeftPanel() -> Element {
                 Link {
                     to: AppRoute::Templates,
                     onclick: move |_| {
-                        if !main_state.read().is_templates() {
-                            main_state.write().set_templates(None);
+                        if !current_location.is_templates() {
+                            main_state.write().set_location(LocationState::Templates);
                         }
                     },
                     "Templates"

@@ -1,45 +1,52 @@
+use dioxus_utils::DataState;
+
 use crate::views::{SecretListItemApiModel, TemplateApiModel};
 
-pub enum MainState {
-    Nothing,
-    Templates(Option<Vec<TemplateApiModel>>),
-    Secrets(Option<Vec<SecretListItemApiModel>>),
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum LocationState {
+    None,
+    Templates,
+    Secrets,
 }
 
-impl MainState {
+impl LocationState {
     pub fn is_templates(&self) -> bool {
         match self {
-            Self::Templates(_) => true,
+            Self::Templates => true,
             _ => false,
         }
     }
 
     pub fn is_secrets(&self) -> bool {
         match self {
-            Self::Secrets(_) => true,
+            Self::Secrets => true,
             _ => false,
         }
     }
+}
 
-    pub fn set_secrets(&mut self, secrets: Option<Vec<SecretListItemApiModel>>) {
-        *self = Self::Secrets(secrets);
-    }
+pub struct MainState {
+    pub location: LocationState,
+    pub templates: DataState<Vec<TemplateApiModel>>,
+    pub secrets: DataState<Vec<SecretListItemApiModel>>,
+}
 
-    pub fn set_templates(&mut self, templates: Option<Vec<TemplateApiModel>>) {
-        *self = Self::Templates(templates);
-    }
-
-    pub fn unwrap_as_templates(&self) -> &Option<Vec<TemplateApiModel>> {
-        match self {
-            Self::Templates(data) => data,
-            _ => panic!("Not a templates state"),
+impl MainState {
+    pub fn new(location: LocationState) -> Self {
+        Self {
+            location,
+            templates: DataState::None,
+            secrets: DataState::None,
         }
     }
 
-    pub fn unwrap_as_secrets(&self) -> &Option<Vec<SecretListItemApiModel>> {
-        match self {
-            Self::Secrets(data) => data,
-            _ => panic!("Not a templates state"),
-        }
+    pub fn set_location(&mut self, location: LocationState) {
+        self.location = location;
+        self.drop_data();
+    }
+
+    pub fn drop_data(&mut self) {
+        self.templates = DataState::None;
+        self.secrets = DataState::None;
     }
 }

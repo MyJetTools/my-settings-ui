@@ -2,10 +2,11 @@ use std::{rc::Rc, collections::BTreeMap};
 
 use dioxus::prelude::*;
 
+use dioxus_utils::DataState;
 use serde::*;
 
 use crate::{
-    dialogs::*, states::*, views::icons::*
+    dialogs::*, states::*, ui_utils::ToastType, views::icons::*
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -20,61 +21,71 @@ pub fn SecretsList() -> Element {
 
     let main_state_read_access = main_state.read();
 
+    let mut component_state = use_signal(||SecretsListState::new());
+
+    let component_state_read_access = component_state.read();
+
+
     let mut filter_secret = consume_context::<Signal<FilterSecret>>();
 
     let filter_secret_read_access = filter_secret.read();
-    let value_to_filter = filter_secret_read_access.as_str();
 
 
-    let mut order_by_state = use_signal( || OrderBy::Name);
 
-    let order_by_value = {
-        let order_by_read_access = order_by_state.read();
-        order_by_read_access.clone()
+    let secrets = match &main_state_read_access.secrets{
+    DataState::None =>{
+        spawn(async move{
+            main_state.write().secrets = dioxus_utils::DataState::Loading;
+            match load_secrets().await{
+                Ok(value) => {
+                    main_state.write().secrets = dioxus_utils::DataState::Loaded(value);
+                },
+                Err(err) => {
+                    main_state.write().secrets = dioxus_utils::DataState::Error(err.to_string());
+                },
+            }
+
+
+        });
+        return rsx!{
+            LoadingIcon {}
+        }
+    },
+   DataState::Loading =>{
+        return rsx!{
+            LoadingIcon {}
+        }
+   },
+   DataState::Loaded(value) => value,
+    DataState::Error(err) => {
+        return rsx!{
+            div { {err.as_str()} }
+        }
+        
+    },
     };
     
 
 
-    match main_state_read_access.unwrap_as_secrets() {
-        Some(secrets) => {
+
             let last_edited = get_last_edited(&secrets);
 
-            let mut sorted = BTreeMap::new();
+            let sorted = component_state_read_access.sort(secrets.iter());
 
-            let mut name_title = vec![rsx!{"Name"}];
-            let mut updated_title = vec![rsx!{"Updated"}];
+            let (name_up, updated_up)  = match component_state_read_access.order_by{
+                OrderBy::Name=>{
+                    ("▲", "")
 
-            match order_by_value{
-                OrderBy::Name => {
-                    for secret in secrets{
-                    sorted.insert(secret.name.clone(), secret);
-                  
-                };  
-                name_title.push(rsx!{
-                    TableUpIcon {}
-                });
-            },
-         
-                OrderBy::Updated => {for secret in secrets{
-                    sorted.insert(crate::utils::unix_microseconds_to_string(secret.updated).into_string() , secret);
-                    
-                }updated_title.push(rsx!{
-                    TableUpIcon {}
-                });
-            },
-   
-            }
-
-
-            let secrets = sorted.values().
-            filter(|itm|{
-                if value_to_filter.len() == 0 {
-                    return true;
                 }
+                OrderBy::Updated=>{
+                    ("", "▲")
+                }
+            };
 
-                itm.name.to_lowercase().contains(&value_to_filter)
 
-            }).map(|itm| {
+            let secrets = sorted.into_iter().
+            filter(|itm|filter_secret_read_access.filter(&itm.1))
+            .map(|(_, itm)| {
                 let secret = Rc::new(itm.name.to_string());
                 let secret_usage_name = secret.clone();
                 let secret3 = secret.clone();
@@ -115,6 +126,7 @@ pub fn SecretsList() -> Element {
 
                 let created = crate::utils::unix_microseconds_to_string(itm.created);
                 let updated = crate::utils::unix_microseconds_to_string(itm.updated);
+                
                 rsx! {
                     tr { style: "border-top: 1px solid lightgray;",
                         td { style: "padding-left: 10px",
@@ -174,7 +186,7 @@ pub fn SecretsList() -> Element {
                                             .set(DialogState::EditSecret {
                                                 name,
                                                 on_ok: EventHandler::new(move |result: EditSecretResult| {
-                                                    exec_save_secret(main_state, result);
+                                                    exec_save_secret(result);
                                                 }),
                                             })
                                     },
@@ -183,11 +195,12 @@ pub fn SecretsList() -> Element {
                                 button {
                                     class: "btn btn-sm btn-danger",
                                     onclick: move |_| {
+                                        let secret_id = delete_secret_button.clone();
                                         consume_context::<Signal<DialogState>>()
                                             .set(DialogState::Confirmation {
                                                 content: format!("Delete secret {}", delete_secret_button.as_str()),
                                                 on_ok: EventHandler::new(move |_| {
-                                                    spawn(async move {});
+                                                    exec_delete_secret(secret_id.to_string());
                                                 }),
                                             });
                                     },
@@ -198,6 +211,7 @@ pub fn SecretsList() -> Element {
                     }
                 }
             });
+
             rsx! {
                 table { class: "table table-striped", style: "text-align: left;",
                     thead {
@@ -209,16 +223,16 @@ pub fn SecretsList() -> Element {
                                         td {
                                             style: "cursor:pointer",
                                             onclick: move |_| {
-                                                order_by_state.set(OrderBy::Name);
+                                                component_state.write().order_by = OrderBy::Name;
                                             },
-                                            {name_title.into_iter()}
+                                            "Name {name_up}"
                                         }
                                         td { style: "width:90%",
                                             div { class: "input-group",
                                                 span { class: "input-group-text", SearchIcon {} }
                                                 input {
                                                     class: "form-control form-control-sm",
-                                                    value: "{value_to_filter}",
+                                                    value: filter_secret_read_access.as_str(),
                                                     oninput: move |cx| {
                                                         let mut write = filter_secret.write();
                                                         write.set_value(cx.value().as_str());
@@ -234,9 +248,9 @@ pub fn SecretsList() -> Element {
                             th {
                                 style: "cursor:pointer",
                                 onclick: move |_| {
-                                    order_by_state.set(OrderBy::Updated);
+                                    component_state.write().order_by = OrderBy::Updated;
                                 },
-                                {updated_title.into_iter()}
+                                "Updated {updated_up}"
                             }
                             th {
                                 div {
@@ -247,7 +261,7 @@ pub fn SecretsList() -> Element {
                                                 .set(DialogState::EditSecret {
                                                     name: "".to_string().into(),
                                                     on_ok: EventHandler::new(move |result: EditSecretResult| {
-                                                        exec_save_secret(main_state, result);
+                                                        exec_save_secret(result);
                                                     }),
                                                 })
                                         },
@@ -260,28 +274,30 @@ pub fn SecretsList() -> Element {
                     tbody { {secrets.into_iter()} }
                 }
             }
+    
         }
-        None => {
-            
-            spawn(async move{
-                let result = load_secrets().await.unwrap();
-                main_state.write().set_secrets(Some(result));
-            });
-            
-            rsx! {
-                LoadingIcon {}
-            }
-        }
-    }
-}
 
-fn exec_save_secret(mut main_state : Signal<MainState>, result: EditSecretResult){
+fn exec_save_secret(result: EditSecretResult){
     spawn(async move { match save_secret(result.name, result.value, result.level).await{
         Ok(_) => {
-            let mut write = main_state.write();
-            write.set_secrets(None);
+            consume_context::<Signal<MainState>>().write().drop_data();
+            crate::ui_utils::show_toast("Secret is saved", ToastType::Info);
         },
-        Err(_) => todo!(),
+        Err(_) => {
+            crate::ui_utils::show_toast("Error saving secret", ToastType::Error);
+        },
+    } });
+}
+
+fn exec_delete_secret(secret_id: String){
+    spawn(async move { match delete_secret(secret_id).await{
+        Ok(_) => {
+           consume_context::<Signal<MainState>>().write().drop_data();
+            crate::ui_utils::show_toast("Secret is deleted", ToastType::Info);
+        },
+        Err(_) => {
+            crate::ui_utils::show_toast("Error deleting secret", ToastType::Error);
+        },
     } });
 }
 
@@ -305,6 +321,41 @@ fn get_last_edited(secrets: &Vec<SecretListItemApiModel>)->String{
 
     value
 
+}
+pub struct SecretsListState{
+    pub order_by: OrderBy,
+}
+
+impl SecretsListState{
+    pub fn new()->Self{
+        Self{
+            order_by: OrderBy::Name,
+        }
+    }
+
+    pub fn sort<'a>(&self, secrets: impl Iterator<Item = &'a SecretListItemApiModel>)->BTreeMap<String, &'a SecretListItemApiModel>{
+        let mut result = BTreeMap::new();
+
+
+        match self.order_by{
+            OrderBy::Name => {
+                for secret in secrets{
+                    result.insert(secret.name.clone(), secret);
+              
+            };  
+        },
+     
+            OrderBy::Updated => {
+                for secret in secrets{
+                    result.insert(crate::utils::unix_microseconds_to_string(secret.updated).into_string() , secret);
+                
+            };
+        },
+
+        }
+
+        result
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -341,6 +392,16 @@ pub async fn load_secrets() -> Result<Vec<SecretListItemApiModel>, ServerFnError
 #[server]
 pub async fn save_secret(name: String, value: String, level: i32) -> Result<(), ServerFnError> {
     crate::server::grpc_client::SecretsGrpcClient::save_secret(name, value, level)
+        .await
+        .unwrap();
+
+    Ok(())
+}
+
+
+#[server]
+async fn delete_secret(secret_id: String) -> Result<(), ServerFnError> {
+    crate::server::grpc_client::SecretsGrpcClient::delete_secret(secret_id)
         .await
         .unwrap();
 

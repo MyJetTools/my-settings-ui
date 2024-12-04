@@ -1,3 +1,5 @@
+use crate::SecretListItemApiModel;
+
 pub struct FilterSecret(String);
 
 impl FilterSecret {
@@ -11,5 +13,12 @@ impl FilterSecret {
 
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+
+    pub fn filter(&self, itm: &SecretListItemApiModel) -> bool {
+        if self.0.len() == 0 {
+            return true;
+        }
+        itm.name.to_lowercase().contains(&self.0)
     }
 }

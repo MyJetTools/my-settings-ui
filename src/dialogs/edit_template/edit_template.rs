@@ -5,13 +5,14 @@ use dioxus::prelude::*;
 use dioxus_utils::DataState;
 use serde::*;
 
-use crate::{dialogs::*, states::*, views::icons::*};
+use crate::{dialogs::*, views::icons::*};
 
 #[component]
 pub fn EditTemplate(
     env: String,
     name: Rc<String>,
     init_from_other_template: Option<(Rc<String>, Rc<String>)>,
+    on_ok: EventHandler<SaveTemplateResult>,
 ) -> Element {
     let mut component_state = use_signal(|| EditTemplateState::new(env, name.to_string()));
 
@@ -153,19 +154,8 @@ pub fn EditTemplate(
                     class: "btn btn-primary",
                     disabled: component_state_read_access.save_button_disabled(),
                     onclick: move |_| {
-                        let (env, name, yaml) = {
-                            let read_access = component_state.read();
-                            (
-                                read_access.env.to_string(),
-                                read_access.name.to_string(),
-                                read_access.yaml.to_string(),
-                            )
-                        };
-                        spawn(async move {
-                            save_template(env, name, yaml).await.unwrap();
-                            consume_context::<Signal<DialogState>>().set(DialogState::None);
-                            consume_context::<Signal<MainState>>().write().set_templates(None);
-                        });
+                        let result = component_state.read().get_result();
+                        on_ok.call(result);
                     },
                     OkButtonIcon {}
                     "Save"
@@ -188,13 +178,10 @@ pub async fn load_template(env: String, name: String) -> Result<LoadedTemplate, 
     Ok(LoadedTemplate { yaml })
 }
 
-#[server]
-pub async fn save_template(env: String, name: String, yaml: String) -> Result<(), ServerFnError> {
-    crate::server::grpc_client::TemplatesGrpcClient::save_template(env, name, yaml)
-        .await
-        .unwrap();
-
-    Ok(())
+pub struct SaveTemplateResult {
+    pub env: String,
+    pub name: String,
+    pub yaml: String,
 }
 
 pub struct EditTemplateState {
@@ -249,6 +236,14 @@ impl EditTemplateState {
         self.yaml.push_str("${");
         self.yaml.push_str(value);
         self.yaml.push('}');
+    }
+
+    pub fn get_result(&self) -> SaveTemplateResult {
+        SaveTemplateResult {
+            env: self.env.to_string(),
+            name: self.name.to_string(),
+            yaml: self.yaml.to_string(),
+        }
     }
 }
 

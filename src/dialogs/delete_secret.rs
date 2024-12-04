@@ -37,12 +37,3 @@ pub fn delete_secret_dialog(secret: String) -> Element {
         }
     }
 }
-
-#[server]
-async fn delete_secret(secret_id: String) -> Result<(), ServerFnError> {
-    crate::grpc_client::SecretsGrpcClient::delete_secret(secret_id)
-        .await
-        .unwrap();
-
-    Ok(())
-}

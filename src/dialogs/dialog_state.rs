@@ -21,6 +21,7 @@ pub enum DialogState {
         env: Rc<String>,
         name: Rc<String>,
         init_from_other_template: Option<(Rc<String>, Rc<String>)>,
+        on_ok: EventHandler<SaveTemplateResult>,
     },
     ShowPopulatedYaml {
         env: Rc<String>,
