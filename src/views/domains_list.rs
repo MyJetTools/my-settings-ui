@@ -1,7 +1,7 @@
 use std::{collections::BTreeMap, rc::Rc};
 
 use dioxus::{html::GlobalAttributes, prelude::*};
-use dioxus_fullstack::prelude::*;
+
 use rust_extensions::StrOrString;
 use serde::*;
 

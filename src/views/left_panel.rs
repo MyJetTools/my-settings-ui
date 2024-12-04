@@ -1,18 +1,19 @@
-use crate::{router::AppRoute, states::MainState};
+use crate::{states::MainState, AppRoute};
 use dioxus::prelude::*;
-use dioxus_fullstack::prelude::*;
 use dioxus_router::prelude::Link;
 
 const ACTIVE_CLASS: &str = "menu-active";
 
-pub fn left_panel(cx: Scope) -> Element {
-    let main_state = use_shared_state::<MainState>(cx).unwrap();
+#[component]
+pub fn LeftPanel() -> Element {
+    let mut main_state = consume_context::<Signal<MainState>>();
+
+    let main_state_read_access = main_state.read();
 
     let mut secrets_active = "";
     let mut templates_active = "";
-    let mut domains_active = "";
 
-    match &*main_state.read() {
+    match &*main_state_read_access {
         MainState::Nothing => {}
         MainState::Templates(_) => {
             templates_active = ACTIVE_CLASS;
@@ -20,28 +21,10 @@ pub fn left_panel(cx: Scope) -> Element {
         MainState::Secrets(_) => {
             secrets_active = ACTIVE_CLASS;
         }
-        MainState::Domains(_) => {
-            domains_active = ACTIVE_CLASS;
-        }
     }
 
-    let env_name_state: &UseState<Option<String>> = use_state(cx, || None);
-
-    let env_name = match env_name_state.get() {
-        Some(value) => value,
-        None => {
-            let env_name_state = env_name_state.to_owned();
-            cx.spawn(async move {
-                let env_name = get_env_name().await.unwrap();
-                env_name_state.set(Some(env_name));
-            });
-            "???"
-        }
-    };
-
-    render! {
+    rsx! {
         h1 { "Settings" }
-        h4 { id: "env-type", "{env_name}" }
 
         div { id: "menu",
             div { class: "menu-item {secrets_active}",
@@ -66,27 +49,6 @@ pub fn left_panel(cx: Scope) -> Element {
                     "Templates"
                 }
             }
-
-            div { class: "menu-item {domains_active}",
-                Link {
-                    to: AppRoute::Domains,
-                    onclick: move |_| {
-                        if !main_state.read().is_domains() {
-                            main_state.write().set_domains(None);
-                        }
-                    },
-                    "Domains"
-                }
-            }
         }
     }
-}
-
-#[server]
-async fn get_env_name() -> Result<String, ServerFnError> {
-    let response = crate::grpc_client::TemplatesGrpcClient::get_env_name()
-        .await
-        .unwrap();
-
-    Ok(response)
 }

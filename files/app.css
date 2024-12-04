@@ -2,7 +2,13 @@ body {
     margin: 0;
     padding: 0;
 
+    text-align: left;
+
     overflow: hidden;
+    --panel-width: 200px;
+    --app-width: 100vw;
+    --app-height: 100vh;
+
     --label-color: gray;
     --shadow: 0 0 5px lightgray;
     --shadow-dark: 0 0 5px gray;
@@ -87,42 +93,6 @@ body {
     padding: 0px 5px 2px 5px !important;
 }
 
-#dialog-pad {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: var(--total-width);
-    height: var(--total-height);
-    background-color: rgba(0, 0, 0, 0.8);
-    backdrop-filter: blur(10px);
-    z-index: 100;
-}
-
-
-
-.modal-dialog {
-    width: 90%;
-    background-color: white;
-    padding: 10px;
-    margin-top: 5px;
-    border-radius: 10px;
-    border: 1px solid gray;
-}
-
-.modal-dialog-narrow {
-    width: 500px;
-    background-color: white;
-    padding: 10px;
-    margin-top: 5px;
-    border-radius: 10px;
-    border: 1px solid gray;
-    margin: 100px auto;
-}
-
-.modal-header {
-    padding: 10px;
-}
-
 .have-links {
     background-color: green;
     cursor: pointer;
@@ -162,4 +132,82 @@ body {
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+}
+
+
+.btn-icon-sm {
+    height: 12px;
+}
+
+input:disabled {
+    background-color: #d3d3d329;
+}
+
+
+/* Loader Styles */
+
+.loader {
+    width: 48px;
+    height: 48px;
+    border: 5px solid #FFF;
+    border-bottom-color: #FF3D00;
+    border-radius: 50%;
+    display: inline-block;
+    box-sizing: border-box;
+    animation: rotation 1s linear infinite;
+}
+
+@keyframes rotation {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Modal Dialog Styles */
+
+#dialog-background {
+    position: absolute;
+    left: 0;
+    top: 0;
+
+    width: var(--app-width);
+    height: var(--app-height);
+
+    background-color: #ffffffeb;
+    z-index: 1000;
+}
+
+#dialog-window {
+    background: white;
+    border-radius: 5px;
+    width: 500px;
+    margin: 5px auto;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid lightgray;
+    box-shadow: 0 0 5px #0000001a;
+}
+
+#dialog-window-max {
+    background: white;
+    border-radius: 5px;
+    width: 98%;
+    margin: 5px auto;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid lightgray;
+    box-shadow: 0 0 5px #0000001a;
+    background-color: #f7f7f7;
+}
+
+#dialog-max-content {
+    height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 0 3px #00000040 inset;
+    border-radius: 5px;
+    background-color: white;
 }

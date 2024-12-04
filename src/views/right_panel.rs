@@ -2,22 +2,27 @@ use dioxus::prelude::*;
 
 use crate::{states::*, views::*};
 
-pub fn right_panel(cx: Scope) -> Element {
-    let main_state = use_shared_state::<MainState>(cx).unwrap();
+#[component]
+pub fn RightPanel() -> Element {
+    let main_state = consume_context::<Signal<MainState>>();
 
-    match &*main_state.read() {
+    let main_state_read_access = main_state.read();
+
+    match *main_state_read_access {
         MainState::Nothing => {
-            render!(div {})
+            rsx!(
+                div {}
+            )
         }
         MainState::Templates(_) => {
-            render!(templates_list {})
+            rsx!(
+                TemplatesList {}
+            )
         }
         MainState::Secrets(_) => {
-            render!(secrets_list {})
-        }
-
-        MainState::Domains(_) => {
-            render!(domains_list {})
+            rsx!(
+                SecretsList {}
+            )
         }
     }
 }

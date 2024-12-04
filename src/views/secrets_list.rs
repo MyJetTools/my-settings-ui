@@ -1,32 +1,41 @@
 use std::{rc::Rc, collections::BTreeMap};
 
 use dioxus::prelude::*;
-use dioxus_fullstack::prelude::*;
+
 use serde::*;
 
 use crate::{
-    states::{DialogState, DialogType, MainState, FilterSecret},
-    views::icons::*
+    dialogs::*, states::*, views::icons::*
 };
 
+#[derive(Debug, Clone, Copy)]
 pub enum OrderBy{
     Name,
     Updated,
 }
 
-pub fn secrets_list(cx: Scope) -> Element {
-    let main_state = use_shared_state::<MainState>(cx).unwrap();
+#[component]
+pub fn SecretsList() -> Element {
+    let mut main_state = consume_context::<Signal<MainState>>();
 
-    let filter_secret = use_shared_state::<FilterSecret>(cx).unwrap();
+    let main_state_read_access = main_state.read();
 
-    let value_to_filter = filter_secret.read();
-    let value_to_filter = value_to_filter.as_str();
+    let mut filter_secret = consume_context::<Signal<FilterSecret>>();
+
+    let filter_secret_read_access = filter_secret.read();
+    let value_to_filter = filter_secret_read_access.as_str();
 
 
-    let order_by = use_state(cx, || OrderBy::Name);
+    let mut order_by_state = use_signal( || OrderBy::Name);
+
+    let order_by_value = {
+        let order_by_read_access = order_by_state.read();
+        order_by_read_access.clone()
+    };
+    
 
 
-    match main_state.read().unwrap_as_secrets() {
+    match main_state_read_access.unwrap_as_secrets() {
         Some(secrets) => {
             let last_edited = get_last_edited(&secrets);
 
@@ -35,19 +44,23 @@ pub fn secrets_list(cx: Scope) -> Element {
             let mut name_title = vec![rsx!{"Name"}];
             let mut updated_title = vec![rsx!{"Updated"}];
 
-            match order_by.get(){
+            match order_by_value{
                 OrderBy::Name => {
                     for secret in secrets{
                     sorted.insert(secret.name.clone(), secret);
                   
                 };  
-                name_title.push(rsx!{ table_up_icon {} });
+                name_title.push(rsx!{
+                    TableUpIcon {}
+                });
             },
          
                 OrderBy::Updated => {for secret in secrets{
-                    sorted.insert(crate::utils::unix_microseconds_to_string(secret.updated) , secret);
+                    sorted.insert(crate::utils::unix_microseconds_to_string(secret.updated).into_string() , secret);
                     
-                }updated_title.push(rsx!{ table_up_icon {} });
+                }updated_title.push(rsx!{
+                    TableUpIcon {}
+                });
             },
    
             }
@@ -63,9 +76,9 @@ pub fn secrets_list(cx: Scope) -> Element {
 
             }).map(|itm| {
                 let secret = Rc::new(itm.name.to_string());
-                let secret2 = secret.clone();
+                let secret_usage_name = secret.clone();
                 let secret3 = secret.clone();
-                let edit_button_secret = secret.clone();
+                let edit_button_secret_name = secret.clone();
                 let delete_secret_button = secret.clone();
 
                 let mut class_template =  "badge badge-success empty-links";
@@ -112,13 +125,9 @@ pub fn secrets_list(cx: Scope) -> Element {
                                         if templates_amount == 0 {
                                             return;
                                         }
-                                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
-                                        dialog_state
-                                            .write()
-                                            .show_dialog(
-                                                format!("Show secret '{}' usage", secret2),
-                                                DialogType::SecretUsage(secret2.to_string()),
-                                            );
+                                        let secret_name = secret_usage_name.clone();
+                                        consume_context::<Signal<DialogState>>()
+                                            .set(DialogState::SecretUsage(secret_name))
                                     },
                                     "{itm.used_by_templates}"
                                 }
@@ -132,136 +141,148 @@ pub fn secrets_list(cx: Scope) -> Element {
                                         if secret_amount == 0 {
                                             return;
                                         }
-                                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
-                                        dialog_state
-                                            .write()
-                                            .show_dialog(
-                                                format!("Show secret '{}' usage", secret3),
-                                                DialogType::SecretUsageBySecret(secret3.to_string()),
-                                            );
+                                        let name = secret3.clone();
+                                        consume_context::<Signal<DialogState>>()
+                                            .set(DialogState::SecretUsageBySecret(name));
                                     },
                                     "{itm.used_by_secrets}"
                                 }
                             }
                         }
-                        td { style: "padding: 10px", "{itm.name}", last_edited }
+                        td { style: "padding: 10px",
+                            "{itm.name}"
+                            {last_edited}
+                        }
                         td { "{itm.level}" }
-                        td { "{created}" }
-                        td { "{updated}" }
+                        td { "{created.without_microseconds()}" }
+                        td { "{updated.without_microseconds()}" }
                         td {
                             div { class: "btn-group",
                                 button {
                                     class: "btn btn-sm btn-success",
                                     onclick: move |_| {
-                                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
-                                        dialog_state
-                                            .write()
-                                            .show_dialog(
-                                                format!("Show [{}] secret value", secret),
-                                                DialogType::ShowSecret(secret.to_string()),
-                                            );
+                                        let name = secret.clone();
+                                        consume_context::<Signal<DialogState>>().set(DialogState::ShowSecret(name));
                                     },
-                                    view_template_icon {}
+                                    ViewTemplateIcon {}
                                 }
                                 button {
                                     class: "btn btn-sm btn-primary",
                                     onclick: move |_| {
-                                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
-                                        dialog_state
-                                            .write()
-                                            .show_dialog(
-                                                format!("Edit secret").to_string(),
-                                                DialogType::EditSecret(edit_button_secret.to_string()),
-                                            );
+                                        let name = edit_button_secret_name.clone();
+                                        consume_context::<Signal<DialogState>>()
+                                            .set(DialogState::EditSecret {
+                                                name,
+                                                on_ok: EventHandler::new(move |result: EditSecretResult| {
+                                                    exec_save_secret(main_state, result);
+                                                }),
+                                            })
                                     },
-                                    edit_icon {}
+                                    EditIcon {}
                                 }
                                 button {
                                     class: "btn btn-sm btn-danger",
                                     onclick: move |_| {
-                                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
-                                        dialog_state
-                                            .write()
-                                            .show_dialog(
-                                                format!("Delete secret {}", delete_secret_button.as_str()).to_string(),
-                                                DialogType::DeleteSecret(delete_secret_button.to_string()),
-                                            );
+                                        consume_context::<Signal<DialogState>>()
+                                            .set(DialogState::Confirmation {
+                                                content: format!("Delete secret {}", delete_secret_button.as_str()),
+                                                on_ok: EventHandler::new(move |_| {
+                                                    spawn(async move {});
+                                                }),
+                                            });
                                     },
-                                    delete_icon {}
+                                    DeleteIcon {}
                                 }
                             }
                         }
                     }
                 }
             });
-            render! {
+            rsx! {
                 table { class: "table table-striped", style: "text-align: left;",
-                    tr {
-                        th { style: "padding: 10px", colspan: "2", "Used" }
-                        th { style: "width:100%",
-                            table {
-                                tr {
-                                    td {
-                                        style: "cursor:pointer",
-                                        onclick: move |_| {
-                                            order_by.set(OrderBy::Name);
-                                        },
-                                        name_title.into_iter()
-                                    }
-                                    td { style: "width:100%",
-                                        div { class: "input-group",
-                                            span { class: "input-group-text", search_icon {} }
-                                            input {
-                                                class: "form-control form-control-sm",
-                                                value: "{value_to_filter}",
-                                                oninput: move |cx| {
-                                                    let mut write = filter_secret.write();
-                                                    write.set_value(cx.value.as_str());
+                    thead {
+                        tr {
+                            th { style: "padding: 10px", colspan: "2", "Used" }
+                            th { style: "width:50%",
+                                table {
+                                    tr {
+                                        td {
+                                            style: "cursor:pointer",
+                                            onclick: move |_| {
+                                                order_by_state.set(OrderBy::Name);
+                                            },
+                                            {name_title.into_iter()}
+                                        }
+                                        td { style: "width:90%",
+                                            div { class: "input-group",
+                                                span { class: "input-group-text", SearchIcon {} }
+                                                input {
+                                                    class: "form-control form-control-sm",
+                                                    value: "{value_to_filter}",
+                                                    oninput: move |cx| {
+                                                        let mut write = filter_secret.write();
+                                                        write.set_value(cx.value().as_str());
+                                                    }
                                                 }
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
-                        th { "Level" }
-                        th { "Created" }
-                        th {
-                            style: "cursor:pointer",
-                            onclick: move |_| {
-                                order_by.set(OrderBy::Updated);
-                            },
-                            updated_title.into_iter()
-                        }
-                        th {
-                            div {
-                                button {
-                                    class: "btn btn-sm btn-primary",
-                                    onclick: move |_| {
-                                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
-                                        dialog_state.write().show_dialog("Add secret".to_string(), DialogType::AddSecret);
-                                    },
-                                    add_icon {}
+                            th { "Level" }
+                            th { "Created" }
+                            th {
+                                style: "cursor:pointer",
+                                onclick: move |_| {
+                                    order_by_state.set(OrderBy::Updated);
+                                },
+                                {updated_title.into_iter()}
+                            }
+                            th {
+                                div {
+                                    button {
+                                        class: "btn btn-sm btn-primary",
+                                        onclick: move |_| {
+                                            consume_context::<Signal<DialogState>>()
+                                                .set(DialogState::EditSecret {
+                                                    name: "".to_string().into(),
+                                                    on_ok: EventHandler::new(move |result: EditSecretResult| {
+                                                        exec_save_secret(main_state, result);
+                                                    }),
+                                                })
+                                        },
+                                        AddIcon {}
+                                    }
                                 }
                             }
                         }
                     }
-
-                    secrets.into_iter()
+                    tbody { {secrets.into_iter()} }
                 }
             }
         }
         None => {
-
-            let main_state= main_state.to_owned();
-            cx.spawn(async move{
+            
+            spawn(async move{
                 let result = load_secrets().await.unwrap();
                 main_state.write().set_secrets(Some(result));
             });
             
-            render! { h1 { "loading" } }
+            rsx! {
+                LoadingIcon {}
+            }
         }
     }
+}
+
+fn exec_save_secret(mut main_state : Signal<MainState>, result: EditSecretResult){
+    spawn(async move { match save_secret(result.name, result.value, result.level).await{
+        Ok(_) => {
+            let mut write = main_state.write();
+            write.set_secrets(None);
+        },
+        Err(_) => todo!(),
+    } });
 }
 
 
@@ -299,7 +320,7 @@ pub struct SecretListItemApiModel{
 
 #[server]
 pub async fn load_secrets() -> Result<Vec<SecretListItemApiModel>, ServerFnError> {
-    let response = crate::grpc_client::SecretsGrpcClient::get_all_secrets()
+    let response = crate::server::grpc_client::SecretsGrpcClient::get_all_secrets()
     .await
     .unwrap();
 
@@ -315,4 +336,13 @@ pub async fn load_secrets() -> Result<Vec<SecretListItemApiModel>, ServerFnError
 
     Ok(result)
 
+}
+
+#[server]
+pub async fn save_secret(name: String, value: String, level: i32) -> Result<(), ServerFnError> {
+    crate::server::grpc_client::SecretsGrpcClient::save_secret(name, value, level)
+        .await
+        .unwrap();
+
+    Ok(())
 }

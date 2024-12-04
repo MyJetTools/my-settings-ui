@@ -1,20 +1,26 @@
 use std::rc::Rc;
 
 use super::icons::*;
-use crate::states::{DialogState, DialogType, MainState, FilterTemplate};
+use crate::states::*;
 use dioxus::prelude::*;
-use dioxus_fullstack::prelude::*;
+
+
 use serde::*;
+use crate::dialogs::*;
 
-pub fn templates_list(cx: Scope) -> Element {
-    let main_state = use_shared_state::<MainState>(cx).unwrap();
 
-    let filter = use_shared_state::<FilterTemplate>(cx).unwrap();
+#[component]
+pub fn TemplatesList() -> Element {
+    let mut main_state = consume_context::<Signal<MainState>>();
+
+    let main_state_read_access = main_state.read();
+
+    let mut filter = use_signal(||FilterTemplate::new());
 
     let value_to_filter = filter.read();
     let value_to_filter = value_to_filter.as_str();
 
-    match main_state.read().unwrap_as_templates() {
+    match main_state_read_access.unwrap_as_templates() {
         Some(templates) => {
             let last_edited = get_last_edited(templates);
             let templates = templates.iter().filter(|itm|{
@@ -28,7 +34,7 @@ pub fn templates_list(cx: Scope) -> Element {
                 let last_request = if itm.last_requests == 0 {
                     "".to_string()
                 } else {
-                    crate::utils::unix_microseconds_to_string(itm.last_requests * 1000)
+                    crate::utils::unix_microseconds_to_string(itm.last_requests * 1000).without_microseconds().to_string()
                 };
 
                 let env = Rc::new(itm.env.to_string());
@@ -40,8 +46,8 @@ pub fn templates_list(cx: Scope) -> Element {
                 let delete_template_env = env.clone();
                 let delete_template_name = name.clone();
 
-                let copy_env = env.clone();
-                let copy_name = name.clone();
+                let init_env = env.clone();
+                let init_name = name.clone();
 
                 let last_edited = if last_edited.0.as_str() == env.as_str() && last_edited.1.as_str() == name.as_str(){
                     Some(rsx!(
@@ -58,157 +64,169 @@ pub fn templates_list(cx: Scope) -> Element {
 
                 let alert = if itm.has_missing_placeholders{
                     Some(rsx!{
-                        div { warning_icon {} }
+                        div { WarningIcon {} }
                     })
                 }else{
                     None
                 };
 
+                let created = crate::utils::unix_microseconds_to_string(itm.created);
+                let updated = crate::utils::unix_microseconds_to_string(itm.updated);
+
       
                 rsx! {
                     tr { style: "border-top: 1px solid lightgray",
-                        td { alert }
+                        td { {alert} }
                         td { "{itm.env}" }
                         td { "/" }
-                        td { "{itm.name}", last_edited }
-                        td { "{itm.created}" }
-                        td { "{itm.updated}" }
+                        td {
+                            "{itm.name}"
+                            {last_edited}
+                        }
+                        td { {created.without_microseconds()} }
+                        td { {updated.without_microseconds()} }
                         td { "{last_request}" }
                         td {
                             div { class: "btn-group",
                                 button {
                                     class: "btn btn-sm btn-success",
                                     onclick: move |_| {
-                                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
-                                        dialog_state
-                                            .write()
-                                            .show_dialog(
-                                                format!(
-                                                    "{}/{}", show_populated_yaml_env.as_str(), show_populated_yaml_name
-                                                    .as_str()
-                                                ),
-                                                DialogType::ShowPopulatedYaml {
-                                                    env: show_populated_yaml_env.to_string(),
-                                                    name: show_populated_yaml_name.to_string(),
-                                                },
-                                            );
+                                        let env = show_populated_yaml_env.clone();
+                                        let name = show_populated_yaml_name.clone();
+                                        consume_context::<Signal<DialogState>>()
+                                            .set(DialogState::ShowPopulatedYaml {
+                                                env,
+                                                name,
+                                            });
                                     },
-                                    view_template_icon {}
+                                    ViewTemplateIcon {}
                                 }
                                 button {
                                     class: "btn btn-sm btn-primary",
                                     onclick: move |_| {
-                                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
-                                        dialog_state
-                                            .write()
-                                            .show_dialog(
-                                                "Edit template".to_string(),
-                                                DialogType::EditTemplate {
-                                                    env: env.to_string(),
-                                                    name: name.to_string(),
-                                                },
-                                            );
+                                        let env = env.clone();
+                                        let name = name.clone();
+                                        consume_context::<Signal<DialogState>>()
+                                            .set(DialogState::EditTemplate {
+                                                env,
+                                                name,
+                                                init_from_other_template: None,
+                                            });
                                     },
-                                    edit_icon {}
+                                    EditIcon {}
                                 }
                                 button {
                                     class: "btn btn-sm btn-warning",
                                     title: "Copy from this template",
                                     onclick: move |_| {
-                                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
-                                        dialog_state
-                                            .write()
-                                            .show_dialog(
-                                                "Edit template".to_string(),
-                                                DialogType::AddTemplateFromOtherTemplate {
-                                                    env: copy_env.to_string(),
-                                                    name: copy_name.to_string(),
-                                                },
-                                            );
+                                        let init_env = init_env.clone();
+                                        let init_name = init_name.clone();
+                                        consume_context::<Signal<DialogState>>()
+                                            .set(DialogState::EditTemplate {
+                                                env: String::new().into(),
+                                                name: String::new().into(),
+                                                init_from_other_template: Some((init_env, init_name)),
+                                            });
                                     },
-                                    copy_from_icon {}
+                                    CopyFromIcon {}
                                 }
                                 button {
                                     class: "btn btn-sm btn-danger",
                                     onclick: move |_| {
-                                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
-                                        dialog_state
-                                            .write()
-                                            .show_dialog(
-                                                format!(
-                                                    "Delete template {}/{}", delete_template_env.as_str(),
-                                                    delete_template_name.as_str()
+                                        let env = delete_template_env.clone();
+                                        let name = delete_template_name.clone();
+                                        consume_context::<Signal<DialogState>>()
+                                            .set(DialogState::Confirmation {
+                                                content: format!(
+                                                    "Please confirm deletion of template {}/{}",
+                                                    delete_template_env.as_str(),
+                                                    delete_template_name.as_str(),
                                                 ),
-                                                DialogType::DeleteTemplate {
-                                                    env: delete_template_env.to_string(),
-                                                    name: delete_template_name.to_string(),
-                                                },
-                                            );
+                                                on_ok: EventHandler::new(move |_| {
+                                                    let env = env.clone();
+                                                    let name = name.clone();
+                                                    spawn(async move {
+                                                        match delete_template(env.to_string(), name.to_string()).await {
+                                                            Ok(_) => {
+                                                                main_state.write().set_templates(None);
+                                                            }
+                                                            Err(_) => {}
+                                                        }
+                                                    });
+                                                }),
+                                            })
                                     },
-                                    delete_icon {}
+                                    DeleteIcon {}
                                 }
                             }
                         }
                     }
                 }
             });
-            render! {
+            rsx! {
                 table { class: "table table-striped", style: "text-align: left;",
-                    tr {
-                        th {}
-                        th { "Env" }
-                        th {}
-                        th {
-                            table {
-                                tr {
-                                    td { "Name" }
-                                    td { style: "width:100%",
-                                        div { class: "input-group",
-                                            span { class: "input-group-text", search_icon {} }
-                                            input {
-                                                class: "form-control form-control-sm",
-                                                value: "{value_to_filter}",
-                                                oninput: move |cx| {
-                                                    let mut filter = filter.write();
-                                                    filter.set_value(cx.value.as_str());
+                    thead {
+                        tr {
+                            th {}
+                            th { "Env" }
+                            th {}
+                            th {
+                                table {
+                                    tr {
+                                        td { "Name" }
+                                        td { style: "width:100%",
+                                            div { class: "input-group",
+                                                span { class: "input-group-text", SearchIcon {} }
+                                                input {
+                                                    class: "form-control form-control-sm",
+                                                    value: "{value_to_filter}",
+                                                    oninput: move |cx| {
+                                                        let mut filter = filter.write();
+                                                        filter.set_value(cx.value().as_str());
+                                                    }
                                                 }
                                             }
                                         }
                                     }
                                 }
                             }
-                        }
-                        th { "Created" }
-                        th { "Updated" }
-                        th { "Last request" }
-                        th {
-                            div {
-                                button {
-                                    class: "btn btn-sm btn-primary",
-                                    onclick: |_| {
-                                        let dialog_state = use_shared_state::<DialogState>(cx).unwrap();
-                                        dialog_state
-                                            .write()
-                                            .show_dialog("Add template".to_string(), DialogType::AddTemplate);
-                                    },
-                                    add_icon {}
+                            th { "Created" }
+                            th { "Updated" }
+                            th { "Last request" }
+                            th {
+                                div {
+                                    button {
+                                        class: "btn btn-sm btn-primary",
+                                        onclick: |_| {
+                                            let mut dialog_state = consume_context::<Signal<DialogState>>();
+                                            dialog_state
+                                                .set(DialogState::EditTemplate {
+                                                    env: String::new().into(),
+                                                    name: String::new().into(),
+                                                    init_from_other_template: None,
+                                                });
+                                        },
+                                        AddIcon {}
+                                    }
                                 }
                             }
                         }
                     }
 
-                    templates.into_iter()
+                    tbody { {templates.into_iter()} }
                 }
             }
         }
         None => {
-            let main_state = main_state.to_owned();
-            cx.spawn(async move {
+
+            spawn(async move {
                 let response = load_templates().await.unwrap();
                 main_state.write().set_templates(Some(response));
             });
 
-            render! { h1 { "loading" } }
+            rsx! {
+                LoadingIcon {}
+            }
         }
     }
 }
@@ -217,53 +235,58 @@ pub fn templates_list(cx: Scope) -> Element {
 pub struct TemplateApiModel {
     pub env: String,
     pub name: String,
-    pub created: String,
-    pub updated: String,
+    pub created: i64,
+    pub updated: i64,
     pub last_requests: i64,
     pub has_missing_placeholders: bool,
 }
 
 #[server]
 async fn load_templates() -> Result<Vec<TemplateApiModel>, ServerFnError> {
-    let response = crate::grpc_client::TemplatesGrpcClient::get_all_templates()
+    use std::collections::BTreeMap;
+    use rust_extensions::date_time::DateTimeAsMicroseconds;
+    
+    let response = crate::server::grpc_client::TemplatesGrpcClient::get_all_templates()
         .await
         .unwrap();
 
-    let result: Vec<_> = response
+    let result: BTreeMap<_, _> = response
         .into_iter()
-        .map(|itm| TemplateApiModel {
+        .map(|itm| (
+            format!("{}/{}", itm.name, itm.env),
+            TemplateApiModel {
             env: itm.env,
             name: itm.name,
-            created: itm.created,
-            updated: itm.updated,
+            created: match DateTimeAsMicroseconds::from_str(itm.created.as_str()){
+                Some(itm)=>itm.unix_microseconds,
+                None=>0
+            },
+            updated: match DateTimeAsMicroseconds::from_str(itm.updated.as_str()){
+                Some(itm)=>itm.unix_microseconds,
+                None=>0
+            },
             last_requests: itm.last_requests,
             has_missing_placeholders: itm.has_missing_placeholders,
-        })
+        }))
         .collect();
+
+    let result = result.into_iter().map(|itm|itm.1).collect();
 
     Ok(result)
 
-    /*
-    let main_state = main_state.to_owned();
 
-    cx.spawn(async move {
-
-
-        main_state.write().set_templates(Some(response));
-    });
-     */
 }
 
 fn get_last_edited(templates: &Vec<TemplateApiModel>) -> (String, String) {
-    let mut max = "";
+    let mut max = 0;
 
     let mut env = "".to_string();
     let mut name = "".to_string();
 
     for template in templates {
-        if template.updated.len() > 0 {
-            if template.updated.as_str() > max {
-                max = &template.updated;
+        if template.updated > 0 {
+            if template.updated > max {
+                max = template.updated;
                 env = template.env.clone();
                 name = template.name.clone();
             }
@@ -271,4 +294,16 @@ fn get_last_edited(templates: &Vec<TemplateApiModel>) -> (String, String) {
     }
 
     (env, name)
+}
+
+
+
+#[server]
+async fn delete_template(env: String, name: String) -> Result<(), ServerFnError> {
+    crate::server::grpc_client::TemplatesGrpcClient::delete_template(env, name)
+        .await
+        .unwrap();
+
+    Ok(())
+  
 }

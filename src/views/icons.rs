@@ -1,47 +1,71 @@
 use dioxus::prelude::*;
-use dioxus_free_icons::icons::bs_icons::*;
-use dioxus_free_icons::*;
 
-pub fn view_template_icon(cx: Scope) -> Element {
-    cx.render(rsx! { Icon { width: 10, height: 10, fill: "white", icon: BsEye } })
+#[component]
+pub fn ViewTemplateIcon() -> Element {
+    rsx! {
+        img { class: "btn-icon-sm", src: "/img/ico-view.svg" }
+    }
+}
+#[component]
+pub fn EditIcon() -> Element {
+    rsx! {
+        img { class: "btn-icon-sm", src: "/img/ico-edit.svg" }
+    }
+}
+#[component]
+pub fn DeleteIcon() -> Element {
+    rsx! {
+        img { class: "btn-icon-sm", src: "/img/ico-delete.svg" }
+    }
+}
+#[component]
+pub fn AddIcon() -> Element {
+    rsx! {
+        img { class: "btn-icon-sm", src: "/img/ico-add.svg" }
+    }
+}
+#[component]
+pub fn OkButtonIcon() -> Element {
+    rsx! {
+        img { class: "btn-icon-sm", src: "/img/ico-ok.svg" }
+    }
 }
 
-pub fn edit_icon(cx: Scope) -> Element {
-    cx.render(rsx! { Icon { width: 10, height: 10, fill: "white", icon: BsPen } })
+#[component]
+pub fn CancelButtonIcon() -> Element {
+    rsx! {
+        img { class: "btn-icon-sm", src: "/img/ico-cancel.svg" }
+    }
+}
+#[component]
+pub fn SearchIcon() -> Element {
+    rsx! {
+        img { class: "btn-icon-sm", src: "/img/ico-search.svg" }
+    }
 }
 
-pub fn delete_icon(cx: Scope) -> Element {
-    cx.render(rsx! { Icon { width: 10, height: 10, fill: "white", icon: BsX } })
+#[component]
+pub fn CopyFromIcon() -> Element {
+    rsx! {
+        img { class: "btn-icon-sm", src: "/img/ico-copy.svg" }
+    }
+}
+#[component]
+pub fn WarningIcon() -> Element {
+    rsx! {
+        img { class: "btn-icon-sm", src: "/img/ico-warning.svg" }
+    }
+}
+#[component]
+pub fn TableUpIcon() -> Element {
+    rsx! {
+        img { class: "btn-icon-sm", src: "/img/ico-up.svg" }
+    }
 }
 
-pub fn add_icon(cx: Scope) -> Element {
-    cx.render(rsx! { Icon { width: 10, height: 10, fill: "white", icon: BsPlusCircle } })
-}
-
-pub fn ok_button_icon(cx: Scope) -> Element {
-    cx.render(rsx! { Icon { width: 16, height: 16, fill: "white", icon: BsCheck } })
-}
-
-pub fn wait_button_icon(cx: Scope) -> Element {
-    cx.render(rsx! { Icon { width: 16, height: 16, fill: "white", icon: BsHourglass } })
-}
-
-pub fn cancel_button_icon(cx: Scope) -> Element {
-    cx.render(rsx! { Icon { width: 16, height: 16, fill: "white", icon: BsX } })
-}
-
-pub fn search_icon(cx: Scope) -> Element {
-    cx.render(rsx! { Icon { width: 16, height: 16, fill: "gray", icon: BsSearch } })
-}
-
-pub fn copy_from_icon(cx: Scope) -> Element {
-    cx.render(rsx! { Icon { width: 10, height: 10, fill: "white", icon: BsStickies } })
-}
-
-pub fn warning_icon(cx: Scope) -> Element {
-    cx.render(rsx! { Icon { width: 16, height: 16, fill: "orange", icon: BsShieldExclamation } })
-}
-
-pub fn table_up_icon(cx: Scope) -> Element {
-    cx.render(rsx! { Icon { width: 16, height: 16, icon: BsArrowUpShort } })
+#[component]
+pub fn LoadingIcon() -> Element {
+    rsx! {
+        span { class: "loader" }
+    }
 }

@@ -1,92 +1,96 @@
 #![allow(non_snake_case)]
 
-#[cfg(feature = "ssr")]
-use app_ctx::AppCtx;
 use dioxus::prelude::*;
-use dioxus_fullstack::prelude::*;
-use router::AppRoute;
-#[cfg(feature = "ssr")]
-mod app_ctx;
 
-mod cf_http_client;
-#[cfg(feature = "ssr")]
-mod grpc_client;
-
-#[cfg(feature = "ssr")]
-mod nginx_http_client;
-mod router;
-#[cfg(feature = "ssr")]
-mod settings;
+mod dialogs;
 mod states;
 mod utils;
 mod views;
+use serde::*;
 use views::*;
+#[cfg(feature = "server")]
+mod server;
 
 use crate::states::*;
-#[cfg(feature = "ssr")]
-lazy_static::lazy_static! {
-    pub static ref APP_CTX: AppCtx = {
-        AppCtx::new()
-    };
-}
 
-#[cfg(feature = "ssr")]
-pub mod templates_grpc {
-    tonic::include_proto!("templates");
-}
-
-#[cfg(feature = "ssr")]
-pub mod secrets_grpc {
-    tonic::include_proto!("secrets");
-}
-
-#[cfg(feature = "ssr")]
-pub mod domains_grpc {
-    tonic::include_proto!("domains");
+#[derive(Routable, Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub enum AppRoute {
+    #[route("/")]
+    Home,
+    #[route("/templates")]
+    Templates,
+    #[route("/secrets")]
+    Secrets,
 }
 
 fn main() {
-    let config = LaunchBuilder::<FullstackRouterConfig<AppRoute>>::router();
+    let cfg = dioxus::fullstack::Config::new();
 
-    #[cfg(feature = "ssr")]
-    let config = config.addr(std::net::SocketAddr::from(([0, 0, 0, 0], 8080)));
+    #[cfg(feature = "server")]
+    let cfg = cfg.addr(([0, 0, 0, 0], 9001));
 
-    config.launch();
+    LaunchBuilder::fullstack().with_cfg(cfg).launch(|| {
+        rsx! {
+            Router::<AppRoute> {}
+        }
+    })
 }
 
-fn Home(cx: Scope) -> Element {
-    use_shared_state_provider(cx, || MainState::Nothing);
-    render! { my_layout {} }
+#[component]
+fn Home() -> Element {
+    use_context_provider(|| Signal::new(MainState::Nothing));
+    rsx! {
+        MyLayout {}
+    }
 }
 
+#[component]
+fn Templates() -> Element {
+    use_context_provider(|| Signal::new(MainState::Templates(None)));
+    rsx! {
+        MyLayout {}
+    }
+}
+
+#[component]
+fn Secrets() -> Element {
+    use_context_provider(|| Signal::new(MainState::Secrets(None)));
+    rsx! {
+        MyLayout {}
+    }
+}
+
+/*
 fn Templates(cx: Scope) -> Element {
     use_shared_state_provider(cx, || MainState::Templates(None));
-    render! { my_layout {} }
+    render! {
+        my_layout {}
+    }
 }
 
-fn Secrets(cx: Scope) -> Element {
-    use_shared_state_provider(cx, || MainState::Secrets(None));
-    render! { my_layout {} }
-}
+
 
 fn Domains(cx: Scope) -> Element {
     use_shared_state_provider(cx, || MainState::Domains(None));
-    render! { my_layout {} }
-}
-
-fn my_layout(cx: Scope) -> Element {
-    use_shared_state_provider(cx, || DialogState::Hidden);
-
-    use_shared_state_provider(cx, || FilterSecret::new());
-    use_shared_state_provider(cx, || FilterTemplate::new());
-
-    use_shared_state_provider(cx, || CloudFlareRecordsState::new());
-
     render! {
+        my_layout {}
+    }
+}
+*/
+
+#[component]
+fn MyLayout() -> Element {
+    use crate::dialogs::*;
+
+    use_context_provider(|| Signal::new(DialogState::None));
+    use_context_provider(|| Signal::new(FilterSecret::new()));
+    use_context_provider(|| Signal::new(FilterTemplate::new()));
+
+    rsx! {
         div { id: "layout",
-            div { id: "left-panel", left_panel {} }
-            div { id: "right-panel", right_panel {} }
-            dialog::render_dialog {}
+            div { id: "left-panel", LeftPanel {} }
+            div { id: "right-panel", RightPanel {} }
+            RenderDialog {}
         }
     }
 }

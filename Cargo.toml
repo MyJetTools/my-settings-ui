@@ -7,8 +7,8 @@ edition = "2021"
 
 [features]
 default = []
-ssr = [
-    "dioxus-fullstack/axum",
+server = [
+    "dioxus/axum",
     "my-logger",
     "my-grpc-extensions",
     "tokio",
@@ -21,29 +21,36 @@ ssr = [
     "lazy_static",
     "serde_yaml",
     "flurl",
+    "my-settings-reader",
 ]
-web = ["dioxus-fullstack/web"]
+web = ["dioxus/web"]
 
 [dependencies]
-rust-extensions = { tag = "0.1.4", git = "https://github.com/MyJetTools/rust-extensions.git" }
-my-logger = { tag = "1.0.2", git = "https://github.com/MyJetTools/my-logger.git", optional = true }
+rust-extensions = { tag = "0.1.5", git = "https://github.com/MyJetTools/rust-extensions.git" }
+my-logger = { tag = "1.2.1", git = "https://github.com/MyJetTools/my-logger.git", optional = true }
 
-my-grpc-extensions = { tag = "0.5.0", git = "https://github.com/MyJetTools/my-grpc-extensions.git", features = [
+my-grpc-extensions = { tag = "0.6.4", git = "https://github.com/MyJetTools/my-grpc-extensions.git", features = [
     "grpc-client",
 ], optional = true }
 
-dioxus-free-icons = { path = "./libs/icon-packages/lib", features = [
-    "bootstrap",
-    "ionicons",
-] }
+
+#dioxus-free-icons = { path = "./libs/icon-packages/lib", features = [
+#    "bootstrap",
+#    "ionicons",
+#] }
+
+
+my-settings-reader = { tag = "0.4.1", git = "https://github.com/MyJetTools/my-settings-reader.git", optional = true }
+
 
 settings-utils = { tag = "0.1.1", git = "https://github.com/MyJetTools/settings-utils.git" }
 
-dioxus-fullstack = { version = "*", features = ["router"] }
-dioxus = { version = "*" }
-dioxus-router-macro = "*"
-dioxus-router = "*"
-dioxus-web = "*"
+dioxus = { version = "0.5", features = ["fullstack", "router"] }
+
+dioxus-utils = { git = "https://github.com/MyJetTools/dioxus-utils.git", tag = "0.1.0", features = [
+    "fullstack",
+] }
+
 serde = "*"
 chrono = "*"
 
@@ -62,8 +69,8 @@ prost = { version = "*", optional = true }
 prost-types = { version = "*", optional = true }
 async-trait = { version = "*", optional = true }
 lazy_static = { version = "*", optional = true }
-flurl = { tag = "0.5.0", git = "https://github.com/MyJetTools/fl-url.git", optional = true }
+flurl = { tag = "0.6.1", git = "https://github.com/MyJetTools/fl-url.git", optional = true }
 base64 = { version = "*" }
 
 [build-dependencies]
-ci-utils = { git = "https://github.com/MyJetTools/ci-utils.git", tag = "0.1.0" }
+ci-utils = { git = "https://github.com/MyJetTools/ci-utils.git", tag = "0.1.1" }
