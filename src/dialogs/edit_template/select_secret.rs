@@ -8,16 +8,17 @@ use crate::views::{load_secrets, SecretListItemApiModel};
 use crate::views::icons::*;
 
 #[component]
-pub fn SelectSecret(on_selected: EventHandler<String>) -> Element {
+pub fn SelectSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> Element {
     let mut component_state = use_signal(|| SelectSecretState::new());
 
     let component_state_read_access = component_state.read();
 
     let secrets = match component_state_read_access.secrets.as_ref() {
         DataState::None => {
+            let env_id = env_id.clone();
             spawn(async move {
                 component_state.write().secrets = DataState::Loading;
-                match load_secrets().await {
+                match load_secrets(env_id.to_string()).await {
                     Ok(data) => {
                         component_state.write().secrets =
                             DataState::Loaded(data.into_iter().map(Rc::new).collect());

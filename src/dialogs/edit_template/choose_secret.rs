@@ -11,7 +11,7 @@ use crate::save_secret;
 use crate::views::{load_secrets, SecretListItemApiModel};
 
 #[component]
-pub fn ChooseSecret(on_selected: EventHandler<String>) -> Element {
+pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> Element {
     let mut component_state = use_signal(|| ChooseSecretState::new());
 
     let component_state_read_access = component_state.read();
@@ -20,9 +20,10 @@ pub fn ChooseSecret(on_selected: EventHandler<String>) -> Element {
         ChooseSecretMode::Select => {
             let secrets = match component_state_read_access.secrets.as_ref() {
                 DataState::None => {
+                    let env_id = env_id.clone();
                     spawn(async move {
                         component_state.write().secrets = DataState::Loading;
-                        match load_secrets().await {
+                        match load_secrets(env_id.to_string()).await {
                             Ok(secrets) => {
                                 component_state.write().secrets =
                                     DataState::Loaded(secrets.into_iter().map(Rc::new).collect());
@@ -79,10 +80,12 @@ pub fn ChooseSecret(on_selected: EventHandler<String>) -> Element {
                     div { class: "alert alert-danger", "Secret already exists" }
                 }
             } else {
+                let env_id_add_new_secret = env_id.clone();
                 rsx! {
                     button {
                         class: "btn btn-primary",
                         onclick: move |_| {
+                            let env_id = env_id_add_new_secret.clone();
                             let (secret_name, secret_value, secret_level) = {
                                 let component_state_read_access = component_state.read();
                                 (
@@ -92,7 +95,9 @@ pub fn ChooseSecret(on_selected: EventHandler<String>) -> Element {
                                 )
                             };
                             spawn(async move {
-                                save_secret(secret_name, secret_value, secret_level).await.unwrap();
+                                save_secret(env_id.to_string(), secret_name, secret_value, secret_level)
+                                    .await
+                                    .unwrap();
                             });
                         },
                         "Add new secret"
@@ -125,9 +130,11 @@ pub fn ChooseSecret(on_selected: EventHandler<String>) -> Element {
                 hr {}
                 h4 { "Copy value from other secret" }
                 SelectSecret {
+                    env_id: env_id.clone(),
                     on_selected: move |value: String| {
+                        let env_id = env_id.clone();
                         spawn(async move {
-                            let result = load_secret(value).await.unwrap();
+                            let result = load_secret(env_id.to_string(), value).await.unwrap();
                             component_state.write().secret_value = result.value;
                         });
                     }

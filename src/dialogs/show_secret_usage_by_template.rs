@@ -10,7 +10,7 @@ use crate::views::icons::*;
 use super::*;
 
 #[component]
-pub fn ShowSecretUsageByTemplate(secret: Rc<String>) -> Element {
+pub fn ShowSecretUsageByTemplate(env_id: Rc<String>, secret: Rc<String>) -> Element {
     let secret_usage_state = use_signal(|| ShowSecretUsageByTemplateState::new());
 
     let secret_usage_state_read_access = secret_usage_state.read();
@@ -84,12 +84,21 @@ pub struct TemplateUsageApiModel {
 }
 
 #[server]
-async fn load_secret_usage(secret_id: String) -> Result<Vec<TemplateUsageApiModel>, ServerFnError> {
-    let response = crate::server::grpc_client::SecretsGrpcClient::get_usage_of_templates(secret_id)
+async fn load_secret_usage(
+    env_id: String,
+    secret_id: String,
+) -> Result<Vec<TemplateUsageApiModel>, ServerFnError> {
+    use crate::server::secrets_grpc::*;
+    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
+
+    let response = ctx
+        .secrets_grpc
+        .get_templates_usage(GetTemplatesUsageRequest { name: secret_id })
         .await
         .unwrap();
 
     let result: Vec<TemplateUsageApiModel> = response
+        .templates
         .into_iter()
         .map(|itm| TemplateUsageApiModel {
             env: itm.env,

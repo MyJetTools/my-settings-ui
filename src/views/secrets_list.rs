@@ -21,6 +21,8 @@ pub fn SecretsList() -> Element {
 
     let main_state_read_access = main_state.read();
 
+    let env_id = main_state_read_access.get_selected_env();
+
     let mut component_state = use_signal(||SecretsListState::new());
 
     let component_state_read_access = component_state.read();
@@ -30,13 +32,13 @@ pub fn SecretsList() -> Element {
 
     let filter_secret_read_access = filter_secret.read();
 
-
-
     let secrets = match &main_state_read_access.secrets{
+
     DataState::None =>{
+        let env_id = env_id.clone();
         spawn(async move{
             main_state.write().secrets = dioxus_utils::DataState::Loading;
-            match load_secrets().await{
+            match load_secrets(env_id.to_string()).await{
                 Ok(value) => {
                     main_state.write().secrets = dioxus_utils::DataState::Loaded(value);
                 },
@@ -94,6 +96,13 @@ pub fn SecretsList() -> Element {
 
                 let mut class_template =  "badge badge-success empty-links";
                 let mut class_secret =  class_template;
+
+                let env_id_add = env_id.clone();
+                let env_id_delete = env_id.clone();
+                let env_id_show_secret = env_id.clone();
+                let env_id_usage = env_id.clone();
+                let env_id_usage_by_secret = env_id.clone();
+
                 if itm.used_by_templates == 0 && itm.used_by_secrets == 0 {
                     class_template = "badge badge-danger have-no-links";
                     class_secret = class_template;
@@ -137,9 +146,13 @@ pub fn SecretsList() -> Element {
                                         if templates_amount == 0 {
                                             return;
                                         }
+                                        let env_id = env_id_show_secret.clone();
                                         let secret_name = secret_usage_name.clone();
                                         consume_context::<Signal<DialogState>>()
-                                            .set(DialogState::SecretUsage(secret_name))
+                                            .set(DialogState::SecretUsage {
+                                                env_id,
+                                                secret: secret_name,
+                                            })
                                     },
                                     "{itm.used_by_templates}"
                                 }
@@ -153,9 +166,13 @@ pub fn SecretsList() -> Element {
                                         if secret_amount == 0 {
                                             return;
                                         }
-                                        let name = secret3.clone();
+                                        let env_id = env_id_usage.clone();
+                                        let secret = secret3.clone();
                                         consume_context::<Signal<DialogState>>()
-                                            .set(DialogState::SecretUsageBySecret(name));
+                                            .set(DialogState::SecretUsageBySecret {
+                                                env_id,
+                                                secret,
+                                            });
                                     },
                                     "{itm.used_by_secrets}"
                                 }
@@ -173,8 +190,13 @@ pub fn SecretsList() -> Element {
                                 button {
                                     class: "btn btn-sm btn-success",
                                     onclick: move |_| {
-                                        let name = secret.clone();
-                                        consume_context::<Signal<DialogState>>().set(DialogState::ShowSecret(name));
+                                        let env_id = env_id_usage_by_secret.clone();
+                                        let secret = secret.clone();
+                                        consume_context::<Signal<DialogState>>()
+                                            .set(DialogState::ShowSecret {
+                                                env_id,
+                                                secret,
+                                            });
                                     },
                                     ViewTemplateIcon {}
                                 }
@@ -182,11 +204,13 @@ pub fn SecretsList() -> Element {
                                     class: "btn btn-sm btn-primary",
                                     onclick: move |_| {
                                         let name = edit_button_secret_name.clone();
+                                        let env_id = env_id_add.clone();
                                         consume_context::<Signal<DialogState>>()
                                             .set(DialogState::EditSecret {
+                                                env_id: env_id.clone(),
                                                 name,
                                                 on_ok: EventHandler::new(move |result: EditSecretResult| {
-                                                    exec_save_secret(result);
+                                                    exec_save_secret(env_id.to_string(), result);
                                                 }),
                                             })
                                     },
@@ -196,11 +220,12 @@ pub fn SecretsList() -> Element {
                                     class: "btn btn-sm btn-danger",
                                     onclick: move |_| {
                                         let secret_id = delete_secret_button.clone();
+                                        let env_id = env_id_delete.clone();
                                         consume_context::<Signal<DialogState>>()
                                             .set(DialogState::Confirmation {
                                                 content: format!("Delete secret {}", delete_secret_button.as_str()),
                                                 on_ok: EventHandler::new(move |_| {
-                                                    exec_delete_secret(secret_id.to_string());
+                                                    exec_delete_secret(env_id.to_string(), secret_id.to_string());
                                                 }),
                                             });
                                     },
@@ -257,11 +282,13 @@ pub fn SecretsList() -> Element {
                                     button {
                                         class: "btn btn-sm btn-primary",
                                         onclick: move |_| {
+                                            let env_id = env_id.clone();
                                             consume_context::<Signal<DialogState>>()
                                                 .set(DialogState::EditSecret {
+                                                    env_id: env_id.clone(),
                                                     name: "".to_string().into(),
                                                     on_ok: EventHandler::new(move |result: EditSecretResult| {
-                                                        exec_save_secret(result);
+                                                        exec_save_secret(env_id.to_string(), result);
                                                     }),
                                                 })
                                         },
@@ -277,8 +304,8 @@ pub fn SecretsList() -> Element {
     
         }
 
-fn exec_save_secret(result: EditSecretResult){
-    spawn(async move { match save_secret(result.name, result.value, result.level).await{
+fn exec_save_secret(env_id: String, result: EditSecretResult){
+    spawn(async move { match save_secret(env_id, result.name, result.value, result.level).await{
         Ok(_) => {
             consume_context::<Signal<MainState>>().write().drop_data();
             crate::ui_utils::show_toast("Secret is saved", ToastType::Info);
@@ -289,8 +316,8 @@ fn exec_save_secret(result: EditSecretResult){
     } });
 }
 
-fn exec_delete_secret(secret_id: String){
-    spawn(async move { match delete_secret(secret_id).await{
+fn exec_delete_secret(env_id: String, secret_id: String){
+    spawn(async move { match delete_secret(env_id,secret_id).await{
         Ok(_) => {
            consume_context::<Signal<MainState>>().write().drop_data();
             crate::ui_utils::show_toast("Secret is deleted", ToastType::Info);
@@ -370,12 +397,14 @@ pub struct SecretListItemApiModel{
 
 
 #[server]
-pub async fn load_secrets() -> Result<Vec<SecretListItemApiModel>, ServerFnError> {
-    let response = crate::server::grpc_client::SecretsGrpcClient::get_all_secrets()
-    .await
-    .unwrap();
-
+pub async fn load_secrets(env_id: String) -> Result<Vec<SecretListItemApiModel>, ServerFnError> {
     use rust_extensions::date_time::DateTimeAsMicroseconds;
+    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
+
+    let response = ctx.secrets_grpc.get_all(()).await.unwrap().unwrap_or_default();
+
+
+
 
     let result = response.into_iter().map(|itm|SecretListItemApiModel{
          name: itm.name, 
@@ -390,20 +419,23 @@ pub async fn load_secrets() -> Result<Vec<SecretListItemApiModel>, ServerFnError
 }
 
 #[server]
-pub async fn save_secret(name: String, value: String, level: i32) -> Result<(), ServerFnError> {
-    crate::server::grpc_client::SecretsGrpcClient::save_secret(name, value, level)
-        .await
-        .unwrap();
+pub async fn save_secret(env_id: String, name: String, value: String, level: i32) -> Result<(), ServerFnError> {
+    use crate::server::secrets_grpc::*;
+    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
 
+    ctx.secrets_grpc.save(SaveSecretRequest{ model: SecretModel{ name, value, level }.into() }).await.unwrap();
+    
     Ok(())
 }
 
 
 #[server]
-async fn delete_secret(secret_id: String) -> Result<(), ServerFnError> {
-    crate::server::grpc_client::SecretsGrpcClient::delete_secret(secret_id)
-        .await
-        .unwrap();
+async fn delete_secret(env_id: String, secret_id: String) -> Result<(), ServerFnError> {
+    use crate::server::secrets_grpc::*;
+    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
+
+    ctx.secrets_grpc.delete(DeleteSecretRequest{ name: secret_id }).await.unwrap();
+ 
 
     Ok(())
 }

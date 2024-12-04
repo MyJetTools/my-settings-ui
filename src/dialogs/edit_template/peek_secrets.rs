@@ -11,7 +11,7 @@ use crate::{
 };
 
 #[component]
-pub fn PeekSecrets(yaml: String) -> Element {
+pub fn PeekSecrets(env_id: Rc<String>, yaml: String) -> Element {
     let mut component_state = use_signal(|| PeekSecretsState::new());
 
     let component_state_read_model = component_state.read();
@@ -19,8 +19,9 @@ pub fn PeekSecrets(yaml: String) -> Element {
     let loaded_secrets = match component_state_read_model.loaded_secrets.as_ref() {
         DataState::None => {
             spawn(async move {
+                let env_id = env_id.clone();
                 component_state.write().loaded_secrets = DataState::Loading;
-                match load_secrets().await {
+                match load_secrets(env_id.to_string()).await {
                     Ok(as_vec) => {
                         let mut values = HashMap::new();
 
@@ -60,6 +61,8 @@ pub fn PeekSecrets(yaml: String) -> Element {
         for secret_name in settings_utils::placeholders::get_secret_names(yaml.as_str()) {
             let secret_name_to_load = Rc::new(secret_name.to_string());
 
+            let env_id = env_id.clone();
+
             let (secret_value, secret_level) = if !loaded_secrets.contains_key(secret_name) {
                 (
                     rsx! {
@@ -89,9 +92,11 @@ pub fn PeekSecrets(yaml: String) -> Element {
                                 button {
                                     class: "btn btn-primary btn-sm",
                                     onclick: move |_| {
+                                        let env_id = env_id.clone();
                                         let secret_name = secret_name_to_load.clone();
                                         spawn(async move {
-                                            let secret_model = load_secret(secret_name.to_string()).await;
+                                            let secret_model = load_secret(env_id.to_string(), secret_name.to_string())
+                                                .await;
                                             if let Ok(secret_model) = secret_model {
                                                 if secret_model.name.as_str().len() > 0 {
                                                     component_state
@@ -167,16 +172,22 @@ pub struct SecretApiModel {
 }
 
 #[server]
-async fn load_secret(secret_name: String) -> Result<SecretApiModel, ServerFnError> {
-    let secret_model =
-        crate::server::grpc_client::SecretsGrpcClient::get_secret(secret_name.clone())
-            .await
-            .unwrap();
+async fn load_secret(env_id: String, secret_name: String) -> Result<SecretApiModel, ServerFnError> {
+    use crate::server::secrets_grpc::*;
+    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
+
+    let response = ctx
+        .secrets_grpc
+        .get(GetSecretRequest {
+            name: secret_name.to_string(),
+        })
+        .await
+        .unwrap();
 
     let result = SecretApiModel {
         name: secret_name,
-        value: secret_model.value,
-        level: secret_model.level,
+        value: response.value,
+        level: response.level,
     };
 
     Ok(result)

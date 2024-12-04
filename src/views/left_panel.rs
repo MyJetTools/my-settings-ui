@@ -1,3 +1,4 @@
+use super::*;
 use crate::{states::*, AppRoute};
 use dioxus::prelude::*;
 use dioxus_router::prelude::Link;
@@ -26,6 +27,7 @@ pub fn LeftPanel() -> Element {
     }
 
     rsx! {
+        EnvsSelector {}
         h1 { "Settings" }
 
         div { id: "menu",

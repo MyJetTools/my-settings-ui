@@ -1,12 +1,17 @@
 #![allow(non_snake_case)]
 
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 mod dialogs;
 mod states;
+mod storage;
 mod ui_utils;
 mod utils;
 mod views;
+use dioxus_utils::DataState;
+use icons::LoadingIcon;
 use serde::*;
 use views::*;
 #[cfg(feature = "server")]
@@ -69,6 +74,47 @@ fn MyLayout() -> Element {
     use_context_provider(|| Signal::new(FilterSecret::new()));
     use_context_provider(|| Signal::new(FilterTemplate::new()));
 
+    let mut main_state = consume_context::<Signal<MainState>>();
+
+    let main_state_read_access = main_state.read();
+
+    match main_state_read_access.envs.as_ref() {
+        DataState::None => {
+            spawn(async move {
+                match get_envs().await {
+                    Ok(envs) => {
+                        main_state.write().envs =
+                            DataState::Loaded(envs.into_iter().map(Rc::new).collect());
+                    }
+                    Err(err) => {
+                        main_state.write().envs = DataState::Error(err.to_string());
+                    }
+                }
+            });
+            return rsx! {
+                div { "Loading envs..." }
+            };
+        }
+
+        DataState::Loading => {
+            return {
+                rsx! {
+                    div { "Loading envs..." }
+                    LoadingIcon {}
+                }
+            };
+        }
+        DataState::Loaded(_) => {}
+
+        DataState::Error(err) => {
+            return {
+                rsx! {
+                    div { {err.as_str()} }
+                }
+            }
+        }
+    }
+
     rsx! {
         div { id: "layout",
             div { id: "left-panel", LeftPanel {} }
@@ -94,4 +140,11 @@ fn RenderToast() -> Element {
             }
         }
     }
+}
+
+#[server]
+pub async fn get_envs() -> Result<Vec<String>, ServerFnError> {
+    let result = crate::server::APP_CTX.get_envs().await;
+
+    Ok(result)
 }

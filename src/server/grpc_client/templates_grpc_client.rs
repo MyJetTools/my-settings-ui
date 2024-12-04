@@ -1,4 +1,3 @@
-use crate::server::APP_CTX;
 use my_grpc_extensions::client::*;
 
 #[generate_grpc_client(
@@ -11,6 +10,7 @@ use my_grpc_extensions::client::*;
 )]
 pub struct TemplatesGrpcClient;
 
+/*
 impl TemplatesGrpcClient {
     pub async fn get_template(env: String, name: String) -> Result<String, String> {
         let result = APP_CTX
@@ -71,3 +71,4 @@ impl TemplatesGrpcClient {
         }
     }
 }
+ */

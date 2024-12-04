@@ -1,4 +1,3 @@
-use crate::server::APP_CTX;
 use my_grpc_extensions::client::*;
 #[generate_grpc_client(
     proto_file: "./proto/SecretsService.proto",
@@ -10,6 +9,7 @@ use my_grpc_extensions::client::*;
 )]
 pub struct SecretsGrpcClient;
 
+/*
 impl SecretsGrpcClient {
     pub async fn get_secret(name: String) -> Result<SecretModel, String> {
         let result = tokio::spawn(async move {
@@ -98,3 +98,4 @@ impl SecretsGrpcClient {
         }
     }
 }
+ */

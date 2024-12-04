@@ -7,17 +7,18 @@ use serde::*;
 use crate::{dialogs::*, views::icons::*};
 
 #[component]
-pub fn ShowPopulatedYaml(env: Rc<String>, name: Rc<String>) -> Element {
+pub fn ShowPopulatedYaml(env_id: Rc<String>, env: Rc<String>, name: Rc<String>) -> Element {
     let mut component_state = use_signal(|| ShowPopulatedYamlState::new());
 
     let component_state_read_access = component_state.read();
 
     let content = match component_state_read_access.yaml.as_ref() {
         DataState::None => {
+            let env_id = env_id.clone();
             let env = env.to_string();
             let name = name.to_string();
             spawn(async move {
-                match load_yaml(env, name).await {
+                match load_yaml(env_id.to_string(), env, name).await {
                     Ok(result) => {
                         component_state.write().yaml = DataState::Loaded(result.yaml);
                     }
@@ -69,13 +70,21 @@ pub struct PopulatedYamlModelApiModel {
 }
 
 #[server]
-async fn load_yaml<'s>(
+async fn load_yaml(
+    env_id: String,
     env: String,
     name: String,
 ) -> Result<PopulatedYamlModelApiModel, ServerFnError> {
-    let yaml = crate::server::grpc_client::TemplatesGrpcClient::get_populated_template(env, name)
+    use crate::server::templates_grpc::*;
+    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
+
+    let response = ctx
+        .templates_grpc
+        .compile_yaml(CompileYamlRequest { env, name })
         .await
         .unwrap();
 
-    Ok(PopulatedYamlModelApiModel { yaml })
+    Ok(PopulatedYamlModelApiModel {
+        yaml: response.yaml,
+    })
 }

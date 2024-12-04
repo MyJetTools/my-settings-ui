@@ -18,43 +18,54 @@ pub fn RenderDialog() -> Element {
             }
         }
 
-        DialogState::EditSecret { name, on_ok } => {
+        DialogState::EditSecret {
+            env_id,
+            name,
+            on_ok,
+        } => {
             return rsx! {
-                EditSecret { name, on_ok }
+                EditSecret { env_id, name, on_ok }
             }
         }
-        DialogState::SecretUsage(secret) => {
+        DialogState::SecretUsage { env_id, secret } => {
             rsx! {
-                ShowSecretUsageByTemplate { secret }
-            }
-        }
-
-        DialogState::SecretUsageBySecret(secret) => {
-            rsx! {
-                ShowSecretUsageBySecret { secret }
+                ShowSecretUsageByTemplate { env_id, secret }
             }
         }
 
-        DialogState::ShowSecret(secret) => {
+        DialogState::SecretUsageBySecret { env_id, secret } => {
             rsx! {
-                ShowSecret { secret }
+                ShowSecretUsageBySecret { env_id, secret }
+            }
+        }
+
+        DialogState::ShowSecret { env_id, secret } => {
+            rsx! {
+                ShowSecret { env_id, secret }
             }
         }
 
         DialogState::EditTemplate {
+            env_id,
             env,
             name,
             init_from_other_template,
             on_ok,
         } => {
             rsx! {
-                EditTemplate { env, name, init_from_other_template, on_ok }
+                EditTemplate {
+                    env_id,
+                    env,
+                    name,
+                    init_from_other_template,
+                    on_ok
+                }
             }
         }
 
-        DialogState::ShowPopulatedYaml { env, name } => {
+        DialogState::ShowPopulatedYaml { env_id, env, name } => {
             rsx! {
-                ShowPopulatedYaml { env, name }
+                ShowPopulatedYaml { env_id, env, name }
             }
         }
     }

@@ -7,5 +7,7 @@ pub use templates_list::*;
 pub mod icons;
 mod secrets_list;
 pub use secrets_list::*;
+mod envs_selector;
+pub use envs_selector::*;
 //mod domains_list;
 //pub use domains_list::*;

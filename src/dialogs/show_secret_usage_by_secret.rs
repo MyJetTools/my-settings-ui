@@ -8,16 +8,17 @@ use serde::*;
 use crate::{dialogs::*, views::icons::*};
 
 #[component]
-pub fn ShowSecretUsageBySecret(secret: Rc<String>) -> Element {
+pub fn ShowSecretUsageBySecret(env_id: Rc<String>, secret: Rc<String>) -> Element {
     let mut component_state = use_signal(|| ShowSecretUsageBySecretState::new());
 
     let component_state_read_state = component_state.read();
 
     let values = match component_state_read_state.data.as_ref() {
         DataState::None => {
+            let env_id = env_id.clone();
             let secret_id = secret.to_string();
             spawn(async move {
-                match load_secret_usage_by_secret(secret_id).await {
+                match load_secret_usage_by_secret(env_id.to_string(), secret_id).await {
                     Ok(result) => {
                         component_state.write().data = DataState::Loaded(result);
                     }
@@ -97,14 +98,21 @@ pub struct SecretUsageBySecretApiModel {
 }
 
 #[server]
-async fn load_secret_usage_by_secret<'s>(
+async fn load_secret_usage_by_secret(
+    env_id: String,
     secret_id: String,
 ) -> Result<Vec<SecretUsageBySecretApiModel>, ServerFnError> {
-    let response = crate::server::grpc_client::SecretsGrpcClient::get_usage_of_secrets(secret_id)
+    use crate::server::secrets_grpc::*;
+    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
+
+    let response = ctx
+        .secrets_grpc
+        .get_secrets_usage(GetSecretsUsageRequest { name: secret_id })
         .await
         .unwrap();
 
     let result: Vec<_> = response
+        .secrets
         .into_iter()
         .map(|itm| SecretUsageBySecretApiModel {
             name: itm.name,

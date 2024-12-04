@@ -9,6 +9,7 @@ use crate::{dialogs::*, views::icons::*};
 
 #[component]
 pub fn EditTemplate(
+    env_id: Rc<String>,
     env: String,
     name: Rc<String>,
     init_from_other_template: Option<(Rc<String>, Rc<String>)>,
@@ -37,6 +38,7 @@ pub fn EditTemplate(
                     }
                 }
                 ChooseSecret {
+                    env_id: env_id.clone(),
                     on_selected: move |selected: String| {
                         component_state.write().add_secret_to_yaml(selected.as_str());
                     }
@@ -60,18 +62,19 @@ pub fn EditTemplate(
                         a { class: "nav-link  active", "Peek secret" }
                     }
                 }
-                PeekSecrets { yaml: component_state_read_access.yaml.as_str() }
+                PeekSecrets { env_id: env_id.clone(), yaml: component_state_read_access.yaml.as_str() }
             }
         }
     };
 
     match component_state_read_access.yaml_from_db.as_ref() {
         DataState::None => {
+            let env_id = env_id.clone();
             let env = component_state_read_access.env.to_string();
             let name = component_state_read_access.name.to_string();
             spawn(async move {
                 component_state.write().yaml_from_db = DataState::Loading;
-                match load_template(env, name).await {
+                match load_template(env_id.to_string(), env, name).await {
                     Ok(data) => {
                         component_state.write().init(data.yaml);
                     }
@@ -171,11 +174,22 @@ pub struct LoadedTemplate {
 }
 
 #[server]
-pub async fn load_template(env: String, name: String) -> Result<LoadedTemplate, ServerFnError> {
-    let yaml = crate::server::grpc_client::TemplatesGrpcClient::get_template(env, name)
+pub async fn load_template(
+    env_id: String,
+    env: String,
+    name: String,
+) -> Result<LoadedTemplate, ServerFnError> {
+    use crate::server::templates_grpc::*;
+    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
+
+    let response = ctx
+        .templates_grpc
+        .get(GetTemplateRequest { env, name })
         .await
         .unwrap();
-    Ok(LoadedTemplate { yaml })
+    Ok(LoadedTemplate {
+        yaml: response.yaml,
+    })
 }
 
 pub struct SaveTemplateResult {

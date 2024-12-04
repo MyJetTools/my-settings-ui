@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 use dioxus_utils::DataState;
@@ -8,16 +10,21 @@ use crate::views::icons::*;
 use super::*;
 
 #[component]
-pub fn EditSecret(name: String, on_ok: EventHandler<EditSecretResult>) -> Element {
+pub fn EditSecret(
+    env_id: Rc<String>,
+    name: String,
+    on_ok: EventHandler<EditSecretResult>,
+) -> Element {
     let mut component_state = use_signal(|| EditSecretState::new(name.clone()));
 
     let component_state_read_access = component_state.read();
 
     match component_state_read_access.value_on_init.as_ref() {
         DataState::None => {
+            let env_id = env_id.clone();
             spawn(async move {
                 component_state.write().value_on_init = DataState::Loading;
-                match load_secret(name).await {
+                match load_secret(env_id.to_string(), name).await {
                     Ok(value) => {
                         component_state.write().init_value(SecretValue {
                             value: value.value,
@@ -116,8 +123,16 @@ pub struct SecretValueApiModel {
 }
 
 #[server]
-pub async fn load_secret<'s>(secret_id: String) -> Result<SecretValueApiModel, ServerFnError> {
-    let response = crate::server::grpc_client::SecretsGrpcClient::get_secret(secret_id)
+pub async fn load_secret(
+    env_id: String,
+    secret_id: String,
+) -> Result<SecretValueApiModel, ServerFnError> {
+    use crate::server::secrets_grpc::*;
+    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
+
+    let response = ctx
+        .secrets_grpc
+        .get(GetSecretRequest { name: secret_id })
         .await
         .unwrap();
 
@@ -127,13 +142,6 @@ pub async fn load_secret<'s>(secret_id: String) -> Result<SecretValueApiModel, S
     };
 
     Ok(result)
-    /*
-    let dialog_state = dialog_state.to_owned();
-
-    cx.spawn(async move {
-
-        dialog_state.modify(|itm| itm.set_loaded_values(response.value, response.level));
-    }); */
 }
 
 pub struct EditSecretResult {
