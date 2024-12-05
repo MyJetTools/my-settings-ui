@@ -21,6 +21,7 @@ server = [
     "lazy_static",
     "serde_yaml",
     "flurl",
+    "my-ssh",
     "my-settings-reader",
 ]
 web = ["dioxus/web"]
@@ -29,19 +30,14 @@ web = ["dioxus/web"]
 rust-extensions = { tag = "0.1.5", git = "https://github.com/MyJetTools/rust-extensions.git" }
 my-logger = { tag = "1.2.1", git = "https://github.com/MyJetTools/my-logger.git", optional = true }
 
-my-grpc-extensions = { tag = "0.6.4", git = "https://github.com/MyJetTools/my-grpc-extensions.git", features = [
+my-grpc-extensions = { branch = "main", git = "https://github.com/MyJetTools/my-grpc-extensions.git", features = [
     "grpc-client",
+    "with-unix-socket",
+    "with-ssh",
 ], optional = true }
 
 
-#dioxus-free-icons = { path = "./libs/icon-packages/lib", features = [
-#    "bootstrap",
-#    "ionicons",
-#] }
-
-
 my-settings-reader = { tag = "0.4.1", git = "https://github.com/MyJetTools/my-settings-reader.git", optional = true }
-
 
 settings-utils = { tag = "0.1.1", git = "https://github.com/MyJetTools/settings-utils.git" }
 
@@ -51,9 +47,11 @@ dioxus-utils = { git = "https://github.com/MyJetTools/dioxus-utils.git", tag = "
     "fullstack",
 ] }
 
+
+my-ssh = { tag = "0.1.2", git = "https://github.com/MyJetTools/my-ssh.git", optional = true }
+
 serde = "*"
 chrono = "*"
-
 
 tokio = { version = "*", features = ["full"], optional = true }
 serde_json = { version = "*" }
