@@ -59,8 +59,7 @@ impl AppCtx {
         ctx
     }
 
-    pub async fn get_envs(&self) -> Vec<String> {
-        let app_settings = AppSettingsReader::new();
-        app_settings.get_envs().await
+    pub async fn get_envs(&self, user_id: &String) -> Vec<String> {
+        self.app_settings_reader.get_envs(user_id).await
     }
 }

@@ -54,6 +54,18 @@ impl MainState {
         }
     }
 
+    pub fn set_envs(&mut self, envs: Vec<Rc<String>>) {
+        let has_env = envs.iter().any(|env| env == &self.current_env_id);
+
+        if !has_env {
+            self.current_env_id = envs.first().unwrap().clone();
+            dioxus_utils::js::GlobalAppSettings::get_local_storage()
+                .set(ENV_LOCAL_STORAGE_KEY, &self.current_env_id);
+        }
+
+        self.envs = DataState::Loaded(envs);
+    }
+
     pub fn get_selected_env(&self) -> Rc<String> {
         self.current_env_id.clone()
     }

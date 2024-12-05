@@ -85,8 +85,12 @@ fn MyLayout() -> Element {
                     Ok(resp) => {
                         let mut write_access = main_state.write();
 
-                        write_access.envs =
-                            DataState::Loaded(resp.envs.into_iter().map(Rc::new).collect());
+                        if resp.envs.is_empty() {
+                            write_access.envs = DataState::Error("Unauthorized access".to_string());
+                            return;
+                        }
+
+                        write_access.set_envs(resp.envs.into_iter().map(Rc::new).collect());
 
                         write_access.user = resp.name;
                     }
@@ -157,16 +161,16 @@ pub async fn get_envs() -> Result<EnvsHttpResponse, ServerFnError> {
     let server_context = server_context();
     let req = server_context.request_parts().await;
 
-    let user = if let Some(user) = req.headers.get("x-ssl-user") {
+    let user_id = if let Some(user) = req.headers.get("x-ssl-user") {
         user.to_str().unwrap().to_string()
     } else {
         "".to_string()
     };
 
-    let result = crate::server::APP_CTX.get_envs().await;
+    let result = crate::server::APP_CTX.get_envs(&user_id).await;
 
     Ok(EnvsHttpResponse {
-        name: user,
+        name: user_id,
         envs: result,
     })
 }
