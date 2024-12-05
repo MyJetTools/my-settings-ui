@@ -30,6 +30,8 @@ pub fn LeftPanel() -> Element {
         EnvsSelector {}
         h1 { "Settings" }
 
+        div { {main_state_read_access.user.as_str()} }
+
         div { id: "menu",
             div { class: "menu-item {secrets_active}",
                 Link {

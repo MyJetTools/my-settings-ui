@@ -32,6 +32,7 @@ impl LocationState {
 
 pub struct MainState {
     pub envs: DataState<Vec<Rc<String>>>,
+    pub user: String,
     current_env_id: Rc<String>,
     pub location: LocationState,
     pub templates: DataState<Vec<TemplateApiModel>>,
@@ -49,6 +50,7 @@ impl MainState {
             templates: DataState::None,
             secrets: DataState::None,
             current_env_id: Rc::new(current_env_id),
+            user: "".to_string(),
         }
     }
 

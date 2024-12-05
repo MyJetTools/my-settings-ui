@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
-use my_ssh::SshCredentialsSettingsModel;
 use serde::*;
 
 use crate::server::grpc_client::*;
+use my_ssh::ssh_settings::*;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SettingsModel {
     pub envs: HashMap<String, String>,
-    pub ssh_private_keys: Option<HashMap<String, SshCredentialsSettingsModel>>,
+    pub ssh_private_keys: Option<HashMap<String, SshPrivateKeySettingsModel>>,
 }
 
 pub struct AppSettingsReader {
@@ -44,7 +44,7 @@ impl AppSettingsReader {
 
 pub struct EnvSettings {
     url: String,
-    ssh_private_keys: Option<HashMap<String, SshCredentialsSettingsModel>>,
+    ssh_private_keys: Option<HashMap<String, SshPrivateKeySettingsModel>>,
 }
 
 #[async_trait::async_trait]
@@ -63,12 +63,15 @@ impl my_grpc_extensions::GrpcClientSettings for EnvSettings {
 }
 
 #[async_trait::async_trait]
-impl my_ssh::SshPrivateKeyResolver for EnvSettings {
-    async fn resolve_ssh_private_key(&self, ssh_line: &str) -> Option<my_ssh::SshPrivateKey> {
+impl my_ssh::ssh_settings::SshSecurityCredentialsResolver for EnvSettings {
+    async fn resolve_ssh_private_key(
+        &self,
+        ssh_line: &str,
+    ) -> Option<my_ssh::ssh_settings::SshPrivateKey> {
         let private_keys = self.ssh_private_keys.as_ref()?;
 
         if let Some(ssh_credentials) = private_keys.get(ssh_line) {
-            return my_ssh::SshPrivateKey {
+            return my_ssh::ssh_settings::SshPrivateKey {
                 content: ssh_credentials.load_cert().await,
                 pass_phrase: ssh_credentials.cert_pass_phrase.clone(),
             }
@@ -76,7 +79,7 @@ impl my_ssh::SshPrivateKeyResolver for EnvSettings {
         }
 
         if let Some(ssh_credentials) = private_keys.get("*") {
-            return my_ssh::SshPrivateKey {
+            return my_ssh::ssh_settings::SshPrivateKey {
                 content: ssh_credentials.load_cert().await,
                 pass_phrase: ssh_credentials.cert_pass_phrase.clone(),
             }
@@ -84,5 +87,9 @@ impl my_ssh::SshPrivateKeyResolver for EnvSettings {
         }
 
         None
+    }
+
+    async fn resolve_ssh_password(&self, _ssh_line: &str) -> Option<String> {
+        return None;
     }
 }

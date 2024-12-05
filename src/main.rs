@@ -82,9 +82,13 @@ fn MyLayout() -> Element {
         DataState::None => {
             spawn(async move {
                 match get_envs().await {
-                    Ok(envs) => {
-                        main_state.write().envs =
-                            DataState::Loaded(envs.into_iter().map(Rc::new).collect());
+                    Ok(resp) => {
+                        let mut write_access = main_state.write();
+
+                        write_access.envs =
+                            DataState::Loaded(resp.envs.into_iter().map(Rc::new).collect());
+
+                        write_access.user = resp.name;
                     }
                     Err(err) => {
                         main_state.write().envs = DataState::Error(err.to_string());
@@ -142,9 +146,27 @@ fn RenderToast() -> Element {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnvsHttpResponse {
+    pub name: String,
+    pub envs: Vec<String>,
+}
+
 #[server]
-pub async fn get_envs() -> Result<Vec<String>, ServerFnError> {
+pub async fn get_envs() -> Result<EnvsHttpResponse, ServerFnError> {
+    let server_context = server_context();
+    let req = server_context.request_parts().await;
+
+    let user = if let Some(user) = req.headers.get("x-ssl-user") {
+        user.to_str().unwrap().to_string()
+    } else {
+        "".to_string()
+    };
+
     let result = crate::server::APP_CTX.get_envs().await;
 
-    Ok(result)
+    Ok(EnvsHttpResponse {
+        name: user,
+        envs: result,
+    })
 }
