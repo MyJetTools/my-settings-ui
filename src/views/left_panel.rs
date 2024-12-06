@@ -26,11 +26,22 @@ pub fn LeftPanel() -> Element {
         }
     }
 
+    let user_info = if main_state_read_access.user.as_str().len() > 0 {
+        rsx! {
+
+            div { style: "position: absolute;bottom: 0;width: var(--left-panel-width);",
+                {main_state_read_access.user.as_str()}
+            }
+        }
+    } else {
+        None
+    };
+
     rsx! {
         EnvsSelector {}
         h1 { "Settings" }
 
-        div { {main_state_read_access.user.as_str()} }
+        {user_info},
 
         div { id: "menu",
             div { class: "menu-item {secrets_active}",
