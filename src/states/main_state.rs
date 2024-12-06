@@ -37,6 +37,7 @@ pub struct MainState {
     pub location: LocationState,
     pub templates: DataState<Vec<TemplateApiModel>>,
     pub secrets: DataState<Vec<SecretListItemApiModel>>,
+    pub prompt_ssh_key: Option<bool>,
 }
 
 impl MainState {
@@ -51,6 +52,7 @@ impl MainState {
             secrets: DataState::None,
             current_env_id: Rc::new(current_env_id),
             user: "".to_string(),
+            prompt_ssh_key: None,
         }
     }
 

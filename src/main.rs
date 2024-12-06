@@ -69,6 +69,7 @@ fn Secrets() -> Element {
 #[component]
 fn MyLayout() -> Element {
     use crate::dialogs::*;
+    use crate::views::*;
 
     use_context_provider(|| Signal::new(DialogState::None));
     use_context_provider(|| Signal::new(FilterSecret::new()));
@@ -93,6 +94,7 @@ fn MyLayout() -> Element {
                         write_access.set_envs(resp.envs.into_iter().map(Rc::new).collect());
 
                         write_access.user = resp.name;
+                        write_access.prompt_ssh_key = Some(resp.prompt_ssh_pass_key);
                     }
                     Err(err) => {
                         main_state.write().envs = DataState::Error(err.to_string());
@@ -121,6 +123,12 @@ fn MyLayout() -> Element {
                 }
             }
         }
+    }
+
+    if main_state_read_access.prompt_ssh_key.unwrap_or(false) {
+        return rsx! {
+            PromptSshPassKey {}
+        };
     }
 
     rsx! {
@@ -154,6 +162,7 @@ fn RenderToast() -> Element {
 pub struct EnvsHttpResponse {
     pub name: String,
     pub envs: Vec<String>,
+    prompt_ssh_pass_key: bool,
 }
 
 #[server]
@@ -167,10 +176,11 @@ pub async fn get_envs() -> Result<EnvsHttpResponse, ServerFnError> {
         "".to_string()
     };
 
-    let result = crate::server::APP_CTX.get_envs(&user_id).await;
+    let (envs, prompt_ssh_pass_key) = crate::server::APP_CTX.get_envs(&user_id).await;
 
     Ok(EnvsHttpResponse {
         name: user_id,
-        envs: result,
+        envs,
+        prompt_ssh_pass_key,
     })
 }

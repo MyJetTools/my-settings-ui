@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use serde::*;
 
@@ -10,6 +10,7 @@ pub struct SettingsModel {
     pub envs: HashMap<String, EnvSettingsModel>,
     pub ssh_private_keys: Option<HashMap<String, SshPrivateKeySettingsModel>>,
     pub users: Option<HashMap<String, Vec<String>>>,
+    pub prompt_ssh_pass_phrase: Option<bool>,
 }
 
 impl SettingsModel {
@@ -27,6 +28,23 @@ impl SettingsModel {
         }
 
         false
+    }
+
+    pub fn get_envs(&self, user_id: &String) -> Vec<String> {
+        let mut result = Vec::new();
+
+        for (env, env_settings) in self.envs.iter() {
+            if env_settings.users == "*" {
+                result.push(env.clone());
+                continue;
+            }
+
+            if self.has_user(&env_settings.users, user_id) {
+                result.push(env.clone());
+            }
+        }
+
+        result
     }
 }
 
@@ -52,84 +70,31 @@ impl AppSettingsReader {
     pub async fn get_env_settings(&self, env: &str) -> EnvSettings {
         let settings = self.settings_reader.get_settings().await;
         if let Some(result) = settings.envs.get(env) {
-            return EnvSettings {
-                url: result.url.clone(),
-                ssh_private_keys: settings.ssh_private_keys.clone(),
-            };
+            return EnvSettings(result.url.clone());
         }
 
         panic!("Can not get settings for env: '{}'", env);
     }
 
-    pub async fn get_envs(&self, user_id: &String) -> Vec<String> {
-        let settings = self.settings_reader.get_settings().await;
-
-        let mut result = Vec::new();
-
-        for (env, env_settings) in settings.envs.iter() {
-            if env_settings.users == "*" {
-                result.push(env.clone());
-                continue;
-            }
-
-            if settings.has_user(&env_settings.users, user_id) {
-                result.push(env.clone());
-            }
-        }
-
-        result
+    pub async fn get_settings(&self) -> Arc<SettingsModel> {
+        self.settings_reader.get_settings().await
     }
 }
 
-pub struct EnvSettings {
-    url: String,
-    ssh_private_keys: Option<HashMap<String, SshPrivateKeySettingsModel>>,
-}
+pub struct EnvSettings(String);
 
 #[async_trait::async_trait]
 impl my_grpc_extensions::GrpcClientSettings for EnvSettings {
     async fn get_grpc_url(&self, name: &'static str) -> String {
         if name == TemplatesGrpcClient::get_service_name() {
-            return self.url.to_string();
+            return self.0.to_string();
         }
 
         if name == SecretsGrpcClient::get_service_name() {
-            return self.url.to_string();
+            return self.0.to_string();
         }
 
         panic!("Unknown grpc service name: {}", name)
-    }
-}
-
-#[async_trait::async_trait]
-impl my_ssh::ssh_settings::SshSecurityCredentialsResolver for EnvSettings {
-    async fn resolve_ssh_private_key(
-        &self,
-        ssh_line: &str,
-    ) -> Option<my_ssh::ssh_settings::SshPrivateKey> {
-        let private_keys = self.ssh_private_keys.as_ref()?;
-
-        if let Some(ssh_credentials) = private_keys.get(ssh_line) {
-            return my_ssh::ssh_settings::SshPrivateKey {
-                content: ssh_credentials.load_cert().await,
-                pass_phrase: ssh_credentials.cert_pass_phrase.clone(),
-            }
-            .into();
-        }
-
-        if let Some(ssh_credentials) = private_keys.get("*") {
-            return my_ssh::ssh_settings::SshPrivateKey {
-                content: ssh_credentials.load_cert().await,
-                pass_phrase: ssh_credentials.cert_pass_phrase.clone(),
-            }
-            .into();
-        }
-
-        None
-    }
-
-    async fn resolve_ssh_password(&self, _ssh_line: &str) -> Option<String> {
-        return None;
     }
 }
 
@@ -182,6 +147,7 @@ mod test {
             envs,
             ssh_private_keys: Some(ssh_private_keys),
             users: Some(users),
+            prompt_ssh_pass_phrase: Some(true),
         };
 
         let result = serde_yaml::to_string(&model).unwrap();
