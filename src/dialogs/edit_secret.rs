@@ -16,7 +16,6 @@ pub fn EditSecret(
     on_ok: EventHandler<EditSecretResult>,
 ) -> Element {
     let mut component_state = use_signal(|| EditSecretState::new(name.clone()));
-
     let component_state_read_access = component_state.read();
 
     match component_state_read_access.value_on_init.as_ref() {

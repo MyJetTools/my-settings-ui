@@ -23,6 +23,7 @@ server = [
     "flurl",
     "my-ssh",
     "my-settings-reader",
+    "dioxus-utils/server",
 ]
 web = ["dioxus/web"]
 
@@ -45,6 +46,7 @@ dioxus = { version = "0.5", features = ["fullstack", "router"] }
 
 dioxus-utils = { git = "https://github.com/MyJetTools/dioxus-utils.git", tag = "0.1.0", features = [
     "fullstack",
+
 ] }
 
 

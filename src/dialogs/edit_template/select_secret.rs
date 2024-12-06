@@ -85,7 +85,7 @@ pub struct SelectSecretState {
 impl SelectSecretState {
     pub fn new() -> Self {
         Self {
-            secrets: DataState::Loading,
+            secrets: DataState::None,
             filter: String::new(),
         }
     }
