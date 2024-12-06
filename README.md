@@ -57,3 +57,20 @@ ssh_private_keys:
 prompt_ssh_pass_phrase: true
 
 ```
+
+
+```yaml
+
+envs:
+  env2:
+    url: "ssh:test@10.0.0.0:22->http://localhost:5001"
+    users: Group2
+
+
+ssh_private_keys:
+  "*":
+    cert_path: ~/.ssh/id_rsa
+
+prompt_ssh_pass_phrase: true
+
+```
