@@ -11,7 +11,7 @@ pub fn RenderDialog() -> Element {
     };
 
     match dialog_state {
-        DialogState::None => None,
+        DialogState::None => rsx! {},
         DialogState::Confirmation { content, on_ok } => {
             return rsx! {
                 ConfirmationDialog { content, on_ok }
@@ -58,7 +58,7 @@ pub fn RenderDialog() -> Element {
                     env,
                     name,
                     init_from_other_template,
-                    on_ok
+                    on_ok,
                 }
             }
         }

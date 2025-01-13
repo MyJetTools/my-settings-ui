@@ -34,14 +34,14 @@ pub fn LeftPanel() -> Element {
             }
         }
     } else {
-        None
+        rsx! {}
     };
 
     rsx! {
         EnvsSelector {}
         h1 { "Settings" }
 
-        {user_info},
+        {user_info}
 
         div { id: "menu",
             div { class: "menu-item {secrets_active}",

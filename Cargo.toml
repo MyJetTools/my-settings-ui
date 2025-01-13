@@ -8,7 +8,7 @@ edition = "2021"
 [features]
 default = []
 server = [
-    "dioxus/axum",
+    "dioxus/server",
     "my-logger",
     "my-grpc-extensions",
     "tokio",
@@ -31,7 +31,7 @@ web = ["dioxus/web"]
 rust-extensions = { tag = "0.1.5", git = "https://github.com/MyJetTools/rust-extensions.git" }
 my-logger = { tag = "1.2.1", git = "https://github.com/MyJetTools/my-logger.git", optional = true }
 
-my-grpc-extensions = { branch = "main", git = "https://github.com/MyJetTools/my-grpc-extensions.git", features = [
+my-grpc-extensions = { tag = "0.6.4", git = "https://github.com/MyJetTools/my-grpc-extensions.git", features = [
     "grpc-client",
     "with-unix-socket",
     "with-ssh",
@@ -42,9 +42,9 @@ my-settings-reader = { tag = "0.4.1", git = "https://github.com/MyJetTools/my-se
 
 settings-utils = { tag = "0.1.1", git = "https://github.com/MyJetTools/settings-utils.git" }
 
-dioxus = { version = "0.5", features = ["fullstack", "router"] }
+dioxus = { version = "0.6", features = ["fullstack", "router"] }
 
-dioxus-utils = { git = "https://github.com/MyJetTools/dioxus-utils.git", tag = "0.1.0", features = [
+dioxus-utils = { git = "https://github.com/MyJetTools/dioxus-utils.git", tag = "0.6.0", features = [
     "fullstack",
 
 ] }

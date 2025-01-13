@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     container:
-      image: myjettools/dioxus-docker:0.1.2
+      image: myjettools/dioxus-docker:0.6.20
     steps:
       - uses: actions/checkout@v2
 
@@ -22,16 +22,15 @@ jobs:
           sed -i -e 's/^version = .*/version = "'$ver'"/' Cargo.toml
 
       - run: |
-          dx build --platform fullstack --release
-          python3 build.py ./dist/index.html
+          dx build --platform web --release
+          python3 build.py ./target/dx/my-settings-ui/release/web/public/index.html
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: build-artifacts
           path: |
-            ./target/release/my-settings-ui
-            ./dist 
+            ./target/dx/my-settings-ui/release/web
             ./Dockerfile
 
   publish:

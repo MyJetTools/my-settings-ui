@@ -6,10 +6,10 @@ use super::*;
 #[component]
 pub fn DialogTemplate(
     header: String,
-    header_content: Option<VNode>,
-    content: Option<VNode>,
+    header_content: Option<Element>,
+    content: Element,
     allocate_max_space: Option<bool>,
-    ok_button: Option<VNode>,
+    ok_button: Option<Element>,
     width: Option<String>,
 ) -> Element {
     let allocate_max_space = allocate_max_space.unwrap_or_default();
@@ -29,26 +29,29 @@ pub fn DialogTemplate(
             div {}
         }
     } else {
-        if ok_button.is_none() {
-            rsx! {
-                button {
-                    class: "btn btn-outline-primary",
-                    onclick: move |_| {
-                        consume_context::<Signal<DialogState>>().set(DialogState::None);
-                    },
-                    "Close"
+        match ok_button {
+            Some(ok_button) => {
+                rsx! {
+                    div { class: "btn-group",
+                        {ok_button}
+                        button {
+                            class: "btn btn-outline-primary",
+                            onclick: move |_| {
+                                consume_context::<Signal<DialogState>>().set(DialogState::None);
+                            },
+                            "Cancel"
+                        }
+                    }
                 }
             }
-        } else {
-            rsx! {
-                div { class: "btn-group",
-                    {ok_button},
+            None => {
+                rsx! {
                     button {
                         class: "btn btn-outline-primary",
                         onclick: move |_| {
                             consume_context::<Signal<DialogState>>().set(DialogState::None);
                         },
-                        "Cancel"
+                        "Close"
                     }
                 }
             }
@@ -56,7 +59,7 @@ pub fn DialogTemplate(
     };
 
     let separator = if allocate_max_space {
-        None
+        rsx! {}
     } else {
         rsx! {
             hr {}
@@ -65,7 +68,7 @@ pub fn DialogTemplate(
 
     rsx! {
         div { id: "dialog-background",
-            div { style: "{width_style}", id,
+            div { style: "{width_style.as_str()}", id,
                 div { id: "dialog-header",
                     table { style: "width:100%",
                         tr {
@@ -88,7 +91,7 @@ pub fn DialogTemplate(
 
                 div { id: content_id, {content} }
 
-                {separator},
+                {separator}
 
                 div { style: "text-align:right", {buttons} }
             }

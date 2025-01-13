@@ -27,7 +27,7 @@ pub fn ShowPopulatedYaml(env_id: Rc<String>, env: Rc<String>, name: Rc<String>) 
                     }
                 }
             });
-            None
+            rsx! {}
         }
         DataState::Loading => {
             rsx! {

@@ -30,16 +30,16 @@ pub enum AppRoute {
 }
 
 fn main() {
-    let cfg = dioxus::fullstack::Config::new();
-
-    #[cfg(feature = "server")]
-    let cfg = cfg.addr(([0, 0, 0, 0], 9001));
-
-    LaunchBuilder::fullstack().with_cfg(cfg).launch(|| {
-        rsx! {
-            Router::<AppRoute> {}
-        }
-    })
+    dioxus::LaunchBuilder::new()
+        .with_cfg(server_only!(ServeConfig::builder().incremental(
+            IncrementalRendererConfig::default()
+                .invalidate_after(std::time::Duration::from_secs(120)),
+        )))
+        .launch(|| {
+            rsx! {
+                Router::<AppRoute> {}
+            }
+        })
 }
 
 #[component]
@@ -175,6 +175,8 @@ pub async fn get_envs() -> Result<EnvsHttpResponse, ServerFnError> {
     } else {
         "".to_string()
     };
+
+    println!("Sending envs for user: [{}]", user_id);
 
     let (envs, prompt_ssh_pass_key) = crate::server::APP_CTX.get_envs(&user_id).await;
 
