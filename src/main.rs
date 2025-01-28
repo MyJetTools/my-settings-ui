@@ -168,12 +168,15 @@ pub struct EnvsHttpResponse {
 #[server]
 pub async fn get_envs() -> Result<EnvsHttpResponse, ServerFnError> {
     let server_context = server_context();
-    let req = server_context.request_parts().await;
 
-    let user_id = if let Some(user) = req.headers.get("x-ssl-user") {
-        user.to_str().unwrap().to_string()
-    } else {
-        "".to_string()
+    let user_id = {
+        let req = server_context.request_parts();
+
+        if let Some(user) = req.headers.get("x-ssl-user") {
+            user.to_str().unwrap().to_string()
+        } else {
+            "".to_string()
+        }
     };
 
     println!("Sending envs for user: [{}]", user_id);

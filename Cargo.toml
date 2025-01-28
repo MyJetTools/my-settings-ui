@@ -74,3 +74,15 @@ base64 = { version = "*" }
 
 [build-dependencies]
 ci-utils = { git = "https://github.com/MyJetTools/ci-utils.git", tag = "0.1.1" }
+
+[profile]
+
+[profile.wasm-dev]
+inherits = "dev"
+opt-level = 1
+
+[profile.server-dev]
+inherits = "dev"
+
+[profile.android-dev]
+inherits = "dev"

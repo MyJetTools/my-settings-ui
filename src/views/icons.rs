@@ -3,63 +3,63 @@ use dioxus::prelude::*;
 #[component]
 pub fn ViewTemplateIcon() -> Element {
     rsx! {
-        img { class: "btn-icon-sm", src: "/img/ico-view.svg" }
+        img { class: "btn-icon-sm", src: "/assets/img/ico-view.svg" }
     }
 }
 #[component]
 pub fn EditIcon() -> Element {
     rsx! {
-        img { class: "btn-icon-sm", src: "/img/ico-edit.svg" }
+        img { class: "btn-icon-sm", src: "/assets/img/ico-edit.svg" }
     }
 }
 #[component]
 pub fn DeleteIcon() -> Element {
     rsx! {
-        img { class: "btn-icon-sm", src: "/img/ico-delete.svg" }
+        img { class: "btn-icon-sm", src: "/assets/img/ico-delete.svg" }
     }
 }
 #[component]
 pub fn AddIcon() -> Element {
     rsx! {
-        img { class: "btn-icon-sm", src: "/img/ico-add.svg" }
+        img { class: "btn-icon-sm", src: "/assets/img/ico-add.svg" }
     }
 }
 #[component]
 pub fn OkButtonIcon() -> Element {
     rsx! {
-        img { class: "btn-icon-sm", src: "/img/ico-ok.svg" }
+        img { class: "btn-icon-sm", src: "/assets/img/ico-ok.svg" }
     }
 }
 
 #[component]
 pub fn CancelButtonIcon() -> Element {
     rsx! {
-        img { class: "btn-icon-sm", src: "/img/ico-cancel.svg" }
+        img { class: "btn-icon-sm", src: "/assets/img/ico-cancel.svg" }
     }
 }
 #[component]
 pub fn SearchIcon() -> Element {
     rsx! {
-        img { class: "btn-icon-sm", src: "/img/ico-search.svg" }
+        img { class: "btn-icon-sm", src: "/assets/img/ico-search.svg" }
     }
 }
 
 #[component]
 pub fn CopyFromIcon() -> Element {
     rsx! {
-        img { class: "btn-icon-sm", src: "/img/ico-copy.svg" }
+        img { class: "btn-icon-sm", src: "/assets/img/ico-copy.svg" }
     }
 }
 #[component]
 pub fn WarningIcon() -> Element {
     rsx! {
-        img { class: "btn-icon-sm", src: "/img/ico-warning.svg" }
+        img { class: "btn-icon-sm", src: "/assets/img/ico-warning.svg" }
     }
 }
 #[component]
 pub fn TableUpIcon() -> Element {
     rsx! {
-        img { class: "btn-icon-sm", src: "/img/ico-up.svg" }
+        img { class: "btn-icon-sm", src: "/assets/img/ico-up.svg" }
     }
 }
 

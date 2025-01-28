@@ -11,15 +11,28 @@ use super::*;
 
 #[component]
 pub fn ShowSecretUsageByTemplate(env_id: Rc<String>, secret: Rc<String>) -> Element {
-    let secret_usage_state = use_signal(|| ShowSecretUsageByTemplateState::new());
+    dioxus_utils::js::console_log(format!("Secret Usage: {}", secret).as_str());
 
-    let secret_usage_state_read_access = secret_usage_state.read();
+    let mut component_state = use_signal(|| ShowSecretUsageByTemplateState::new());
 
-    let data = match secret_usage_state_read_access.data.as_ref() {
+    let component_state_read_access = component_state.read();
+
+    let data = match component_state_read_access.data.as_ref() {
         DataState::None => {
+            let secret_id = secret.to_string();
+            spawn(async move {
+                match load_secret_usage(env_id.to_string(), secret_id).await {
+                    Ok(result) => {
+                        component_state.write().data = DataState::Loaded(result);
+                    }
+                    Err(err) => {
+                        component_state.write().data = DataState::Error(err.to_string());
+                    }
+                }
+            });
             return rsx! {
                 div {}
-            }
+            };
         }
         DataState::Loading => {
             return rsx! {
@@ -49,7 +62,7 @@ pub fn ShowSecretUsageByTemplate(env_id: Rc<String>, secret: Rc<String>) -> Elem
 
         rsx! {
             h4 { "{itm.env}/{itm.name}" }
-            {items},
+            {items}
             hr {}
         }
     });
@@ -57,9 +70,10 @@ pub fn ShowSecretUsageByTemplate(env_id: Rc<String>, secret: Rc<String>) -> Elem
     rsx! {
         DialogTemplate {
             header: "Usage of secret {secret.as_str()}",
+            width: "95%",
             content: rsx! {
-                {content}
-            }
+                div { style: "text-align:left", class: "dialog-max-content", {content} }
+            },
         }
     }
 }

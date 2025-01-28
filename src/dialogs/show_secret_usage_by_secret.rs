@@ -53,16 +53,27 @@ pub fn ShowSecretUsageBySecret(env_id: Rc<String>, secret: Rc<String>) -> Elemen
                 let mid = &secret;
                 let right = &itm.value[index + mid.len()..];
                 rsx! {
-                    div { style: "color:gray",
-                        "{itm.name}: {left}"
-                        span { style: "color:black", "{mid}" }
-                        span { style: "color:gray", "{right}" }
+                    tr {
+                        td { "{itm.name}:" }
+                        td {
+                            div { style: "color:gray; padding-left:5px",
+                                "{left}"
+                                span { style: "color:black", "{mid}" }
+                                span { style: "color:gray", "{right}" }
+                            }
+                        }
                     }
                 }
             }
             None => {
                 rsx! {
-                    div { style: "color:gray", "{itm.name}: {itm.value}" }
+                    tr {
+
+                        td { "{itm.name}:" }
+                        td {
+                            div { style: "color:gray; padding-left:5px", " {itm.value}" }
+                        }
+                    }
                 }
             }
         }
@@ -72,9 +83,10 @@ pub fn ShowSecretUsageBySecret(env_id: Rc<String>, secret: Rc<String>) -> Elemen
 
         DialogTemplate {
             header: format!("Usage of secret {}", secret.as_str()),
+            width: "95%",
             content: rsx! {
-                {to_render}
-            }
+                div { style: "text-align:left", class: "dialog-max-content", {to_render} }
+            },
         }
     }
 }

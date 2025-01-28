@@ -154,7 +154,7 @@ pub fn SecretsList() -> Element {
                                                 secret: secret_name,
                                             })
                                     },
-                                    "{itm.used_by_templates}"
+                                    "{templates_amount}"
                                 }
                             }
                         }
@@ -261,7 +261,7 @@ pub fn SecretsList() -> Element {
                                                     oninput: move |cx| {
                                                         let mut write = filter_secret.write();
                                                         write.set_value(cx.value().as_str());
-                                                    }
+                                                    },
                                                 }
                                             }
                                         }

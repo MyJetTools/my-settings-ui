@@ -11,7 +11,7 @@ default_platform = "web"
 #out_dir = "dist"
 
 # resource (public) file folder
-asset_dir = "files"
+asset_dir = "assets"
 
 [web.app]
 # HTML title tag content
@@ -33,10 +33,10 @@ index_on_404 = true
 [web.resource]
 
 # CSS style file
-style = ["/styled.css", "/app.css"]
+style = ["/assets/styled.css", "/assets/app.css"]
 
 # Javascript code file
-script = ["/bootstrap.js"]
+script = ["/assets/bootstrap.js"]
 
 [web.resource.dev]
 
