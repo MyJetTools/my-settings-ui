@@ -19,6 +19,6 @@ pub mod secrets_grpc {
     tonic::include_proto!("secrets");
 }
 
-pub mod domains_grpc {
-    tonic::include_proto!("domains");
-}
+//pub mod domains_grpc {
+//    tonic::include_proto!("domains");
+//}
