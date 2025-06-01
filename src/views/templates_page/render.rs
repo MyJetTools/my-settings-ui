@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use crate::dialogs::states::EditTemplateDialogData;
 use crate::models::*;
 use crate::views::icons::*;
 use crate::{states::*, ui_utils::ToastType};
@@ -16,6 +17,8 @@ pub fn TemplatesPage() -> Element {
 
     let env_id = main_state_read_access.get_selected_env();
 
+    let env_id_to_copy = env_id.clone();
+
     let mut filter_template = consume_context::<Signal<FilterTemplate>>();
     let filter_template_read_access = filter_template.read();
 
@@ -24,9 +27,12 @@ pub fn TemplatesPage() -> Element {
             let env_id_request = env_id.clone();
             spawn(async move {
                 main_state.write().templates = dioxus_utils::DataState::Loading;
-                match super::api::get_templates(env_id_request.to_string()).await {
+                match crate::api::templates::get_templates(env_id_request.to_string()).await {
                     Ok(templates) => {
-                        main_state.write().templates = dioxus_utils::DataState::Loaded(templates);
+                        main_state
+                            .write()
+                            .templates
+                            .set_loaded(templates.into_iter().map(Rc::new).collect());
                     }
                     Err(err) => {
                         main_state.write().templates =
@@ -65,6 +71,9 @@ pub fn TemplatesPage() -> Element {
                     .to_string()
             };
 
+            let template_to_copy = itm.clone();
+            let template_to_edit = itm.clone();
+
             let env = Rc::new(itm.env.to_string());
             let name = Rc::new(itm.name.to_string());
 
@@ -74,13 +83,10 @@ pub fn TemplatesPage() -> Element {
             let delete_template_env = env.clone();
             let delete_template_name = name.clone();
 
-            let init_env = env.clone();
-            let init_name = name.clone();
-
-            let env_id_edit = env_id.clone();
-            let env_id_copy = env_id.clone();
-            let env_id_delete = env_id.clone();
-            let env_id_show_populated_yaml = env_id.clone();
+            let env_id_edit = env_id_to_copy.clone();
+            let env_id_copy = env_id_to_copy.clone();
+            let env_id_delete = env_id_to_copy.clone();
+            let env_id_show_populated_yaml = env_id_to_copy.clone();
 
             let last_edited = if last_edited.0.as_str() == env.as_str()
                 && last_edited.1.as_str() == name.as_str()
@@ -107,6 +113,45 @@ pub fn TemplatesPage() -> Element {
 
             let created = crate::utils::unix_microseconds_to_string(itm.created);
             let updated = crate::utils::unix_microseconds_to_string(itm.updated);
+
+            let copy_from_template_btn = rsx! {
+                button {
+                    class: "btn btn-sm btn-warning",
+                    title: "Copy from this template",
+                    onclick: move |_| {
+                        let env_id = env_id_copy.clone();
+                        let template_to_copy = template_to_copy.clone();
+                        consume_context::<Signal<DialogState>>()
+                            .set(DialogState::EditTemplate {
+                                env_id: env_id.clone(),
+                                data: EditTemplateDialogData::CopyFromOtherTemplate(template_to_copy),
+                                on_ok: EventHandler::new(move |result| {
+                                    exec_save_template(env_id.to_string(), result);
+                                }),
+                            });
+                    },
+                    CopyFromIcon {}
+                }
+            };
+
+            let edit_btn = rsx!{
+                button {
+                    class: "btn btn-sm btn-primary",
+                    onclick: move |_| {
+                        let env_id = env_id_edit.clone();
+                        let template_to_edit = template_to_edit.clone();
+                        consume_context::<Signal<DialogState>>()
+                            .set(DialogState::EditTemplate {
+                                env_id: env_id.clone(),
+                                data: EditTemplateDialogData::Edit(template_to_edit),
+                                on_ok: EventHandler::new(move |result| {
+                                    exec_save_template(env_id.to_string(), result);
+                                }),
+                            });
+                    },
+                    EditIcon {}
+                }
+            };
 
             rsx! {
                 tr { style: "border-top: 1px solid lightgray",
@@ -137,45 +182,9 @@ pub fn TemplatesPage() -> Element {
                                 },
                                 ViewTemplateIcon {}
                             }
-                            button {
-                                class: "btn btn-sm btn-primary",
-                                onclick: move |_| {
-                                    let env_id = env_id_edit.clone();
-                                    let env = env.clone();
-                                    let name = name.clone();
-                                    consume_context::<Signal<DialogState>>()
-                                        .set(DialogState::EditTemplate {
-                                            env_id: env_id.clone(),
-                                            env,
-                                            name,
-                                            init_from_other_template: None,
-                                            on_ok: EventHandler::new(move |result| {
-                                                exec_save_template(env_id.to_string(), result);
-                                            }),
-                                        });
-                                },
-                                EditIcon {}
-                            }
-                            button {
-                                class: "btn btn-sm btn-warning",
-                                title: "Copy from this template",
-                                onclick: move |_| {
-                                    let env_id = env_id_copy.clone();
-                                    let init_env = init_env.clone();
-                                    let init_name = init_name.clone();
-                                    consume_context::<Signal<DialogState>>()
-                                        .set(DialogState::EditTemplate {
-                                            env_id: env_id.clone(),
-                                            env: String::new().into(),
-                                            name: String::new().into(),
-                                            init_from_other_template: Some((init_env, init_name)),
-                                            on_ok: EventHandler::new(move |result| {
-                                                exec_save_template(env_id.to_string(), result);
-                                            }),
-                                        });
-                                },
-                                CopyFromIcon {}
-                            }
+
+                            {copy_from_template_btn}
+                            {edit_btn}
                             button {
                                 class: "btn btn-sm btn-danger",
                                 onclick: move |_| {
@@ -206,6 +215,24 @@ pub fn TemplatesPage() -> Element {
             }
         });
 
+    let add_btn = rsx! {
+        button {
+            class: "btn btn-sm btn-primary",
+            onclick: move |_| {
+                let env_id = env_id.clone();
+                consume_context::<Signal<DialogState>>()
+                    .set(DialogState::EditTemplate {
+                        env_id: env_id.clone(),
+                        data: EditTemplateDialogData::New,
+                        on_ok: EventHandler::new(move |result| {
+                            exec_save_template(env_id.to_string(), result);
+                        }),
+                    });
+            },
+            AddIcon {}
+        }
+    };
+
     rsx! {
         table { class: "table table-striped", style: "text-align: left;",
             thead {
@@ -235,27 +262,7 @@ pub fn TemplatesPage() -> Element {
                     th { "Created" }
                     th { "Updated" }
                     th { "Last request" }
-                    th {
-                        div {
-                            button {
-                                class: "btn btn-sm btn-primary",
-                                onclick: move |_| {
-                                    let env_id = env_id.clone();
-                                    consume_context::<Signal<DialogState>>()
-                                        .set(DialogState::EditTemplate {
-                                            env_id: env_id.clone(),
-                                            env: String::new().into(),
-                                            name: String::new().into(),
-                                            init_from_other_template: None,
-                                            on_ok: EventHandler::new(move |result| {
-                                                exec_save_template(env_id.to_string(), result);
-                                            }),
-                                        });
-                                },
-                                AddIcon {}
-                            }
-                        }
-                    }
+                    th { {add_btn} }
                 }
             }
 
@@ -264,16 +271,9 @@ pub fn TemplatesPage() -> Element {
     }
 }
 
-fn exec_save_template(env_id: String, save_template_result: SaveTemplateResult) {
+fn exec_save_template(env_id: String, data: UpdateTemplateHttpModel) {
     spawn(async move {
-        match super::api::save_template(
-            env_id,
-            save_template_result.env,
-            save_template_result.name,
-            save_template_result.yaml,
-        )
-        .await
-        {
+        match crate::api::templates::save_template(env_id, data).await {
             Ok(_) => {
                 consume_context::<Signal<DialogState>>().set(DialogState::None);
                 consume_context::<Signal<MainState>>().write().drop_data();
@@ -288,7 +288,7 @@ fn exec_save_template(env_id: String, save_template_result: SaveTemplateResult) 
 
 fn exec_delete_template(env_id: String, env: String, name: String) {
     spawn(async move {
-        match super::api::delete_template(env_id, env, name).await {
+        match crate::api::templates::delete_template(env_id, env, name).await {
             Ok(_) => {
                 consume_context::<Signal<DialogState>>().set(DialogState::None);
                 consume_context::<Signal<MainState>>().write().drop_data();
@@ -301,7 +301,7 @@ fn exec_delete_template(env_id: String, env: String, name: String) {
     });
 }
 
-fn get_last_edited(templates: &Vec<TemplateHttpModel>) -> (String, String) {
+fn get_last_edited(templates: &Vec<Rc<TemplateHttpModel>>) -> (String, String) {
     let mut max = 0;
 
     let mut env = "".to_string();

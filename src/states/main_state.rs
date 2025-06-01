@@ -32,7 +32,7 @@ pub struct MainState {
     pub user: String,
     current_env_id: Rc<String>,
     pub location: LocationState,
-    pub templates: DataState<Vec<TemplateHttpModel>>,
+    pub templates: DataState<Vec<Rc<TemplateHttpModel>>>,
     pub secrets: DataState<Vec<SecretHttpModel>>,
     pub prompt_ssh_key: Option<bool>,
 }

@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::{states::*, views::*};
+use crate::states::*;
 
 #[component]
 pub fn RightPanel() -> Element {

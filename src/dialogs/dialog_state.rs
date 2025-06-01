@@ -2,7 +2,9 @@ use std::rc::Rc;
 
 use dioxus::prelude::EventHandler;
 
-use crate::dialogs::*;
+use crate::{dialogs::*, models::UpdateTemplateHttpModel};
+
+use super::states::EditTemplateDialogData;
 
 #[derive(Debug, Clone)]
 pub enum DialogState {
@@ -23,10 +25,8 @@ pub enum DialogState {
 
     EditTemplate {
         env_id: Rc<String>,
-        env: Rc<String>,
-        name: Rc<String>,
-        init_from_other_template: Option<(Rc<String>, Rc<String>)>,
-        on_ok: EventHandler<SaveTemplateResult>,
+        data: EditTemplateDialogData,
+        on_ok: EventHandler<UpdateTemplateHttpModel>,
     },
     ShowPopulatedYaml {
         env_id: Rc<String>,

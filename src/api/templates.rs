@@ -47,15 +47,17 @@ pub async fn get_templates(env_id: String) -> Result<Vec<TemplateHttpModel>, Ser
 #[server]
 pub async fn save_template(
     env_id: String,
-    env: String,
-    name: String,
-    yaml: String,
+    data: UpdateTemplateHttpModel,
 ) -> Result<(), ServerFnError> {
     use crate::server::templates_grpc::*;
     let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
 
     ctx.templates_grpc
-        .save(SaveTemplateRequest { env, name, yaml })
+        .save(SaveTemplateRequest {
+            env: data.env,
+            name: data.name,
+            yaml: data.yaml,
+        })
         .await
         .unwrap();
 
@@ -77,4 +79,21 @@ pub async fn delete_template(
         .unwrap();
 
     Ok(())
+}
+
+#[server]
+pub async fn get_template_content(
+    env_id: String,
+    env: String,
+    name: String,
+) -> Result<String, ServerFnError> {
+    use crate::server::templates_grpc::*;
+    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
+
+    let response = ctx
+        .templates_grpc
+        .get(GetTemplateRequest { env, name })
+        .await
+        .unwrap();
+    Ok(response.yaml)
 }

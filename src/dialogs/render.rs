@@ -47,19 +47,11 @@ pub fn RenderDialog() -> Element {
 
         DialogState::EditTemplate {
             env_id,
-            env,
-            name,
-            init_from_other_template,
+            data,
             on_ok,
         } => {
             rsx! {
-                EditTemplate {
-                    env_id,
-                    env,
-                    name,
-                    init_from_other_template,
-                    on_ok,
-                }
+                EditTemplate { env_id, data, on_ok }
             }
         }
 
