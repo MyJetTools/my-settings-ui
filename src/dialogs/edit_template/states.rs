@@ -83,8 +83,8 @@ impl EditTemplateState {
     pub fn unwrap_into_http_model(&self) -> UpdateTemplateHttpModel {
         UpdateTemplateHttpModel {
             env: self.env.get_value().to_string(),
-            name: self.env.get_value().to_string(),
-            yaml: self.env.get_value().to_string(),
+            name: self.name.get_value().to_string(),
+            yaml: self.yaml.get_value().to_string(),
         }
     }
 }
