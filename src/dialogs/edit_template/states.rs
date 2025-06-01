@@ -61,9 +61,9 @@ impl EditTemplateState {
     }
 
     pub fn save_button_disabled(&self) -> bool {
-        return self.name.is_value_updated()
-            || self.yaml.is_value_updated()
-            || self.env.is_value_updated();
+        return !self.name.is_value_updated()
+            && !self.yaml.is_value_updated()
+            && !self.env.is_value_updated();
     }
 
     pub fn is_new_template(&self) -> bool {
