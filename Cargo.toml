@@ -31,7 +31,7 @@ web = ["dioxus/web"]
 rust-extensions = { tag = "0.1.5", git = "https://github.com/MyJetTools/rust-extensions.git" }
 my-logger = { tag = "1.2.1", git = "https://github.com/MyJetTools/my-logger.git", optional = true }
 
-my-grpc-extensions = { tag = "0.6.4", git = "https://github.com/MyJetTools/my-grpc-extensions.git", features = [
+my-grpc-extensions = { tag = "0.6.5", git = "https://github.com/MyJetTools/my-grpc-extensions.git", features = [
     "grpc-client",
     "with-unix-socket",
     "with-ssh",
@@ -59,11 +59,7 @@ tokio = { version = "*", features = ["full"], optional = true }
 serde_json = { version = "*" }
 serde_yaml = { version = "*", optional = true }
 futures = { version = "*", optional = true }
-tonic = { version = "*", features = [
-    "tls",
-    "tls-roots",
-    "prost",
-], optional = true }
+tonic = { version = "*", features = ["prost"], optional = true }
 anyhow = { version = "*", optional = true }
 prost = { version = "*", optional = true }
 prost-types = { version = "*", optional = true }
@@ -73,7 +69,7 @@ flurl = { tag = "0.6.1", git = "https://github.com/MyJetTools/fl-url.git", optio
 base64 = { version = "*" }
 
 [build-dependencies]
-ci-utils = { git = "https://github.com/MyJetTools/ci-utils.git", tag = "0.1.1" }
+ci-utils = { git = "https://github.com/MyJetTools/ci-utils.git", tag = "0.1.2" }
 
 [profile]
 

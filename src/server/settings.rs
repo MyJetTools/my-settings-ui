@@ -52,6 +52,7 @@ impl SettingsModel {
 pub struct EnvSettingsModel {
     pub url: String,
     pub users: String,
+    pub host: Option<String>,
 }
 
 pub struct AppSettingsReader {
@@ -70,7 +71,10 @@ impl AppSettingsReader {
     pub async fn get_env_settings(&self, env: &str) -> EnvSettings {
         let settings = self.settings_reader.get_settings().await;
         if let Some(result) = settings.envs.get(env) {
-            return EnvSettings(result.url.clone());
+            return EnvSettings {
+                url: result.url.to_string(),
+                host: result.host.clone(),
+            };
         }
 
         panic!("Can not get settings for env: '{}'", env);
@@ -81,17 +85,26 @@ impl AppSettingsReader {
     }
 }
 
-pub struct EnvSettings(String);
+pub struct EnvSettings {
+    url: String,
+    host: Option<String>,
+}
 
 #[async_trait::async_trait]
 impl my_grpc_extensions::GrpcClientSettings for EnvSettings {
-    async fn get_grpc_url(&self, name: &'static str) -> String {
+    async fn get_grpc_url(&self, name: &'static str) -> my_grpc_extensions::GrpcUrl {
         if name == TemplatesGrpcClient::get_service_name() {
-            return self.0.to_string();
+            return my_grpc_extensions::GrpcUrl {
+                url: self.url.to_string(),
+                host_metadata: self.host.clone(),
+            };
         }
 
         if name == SecretsGrpcClient::get_service_name() {
-            return self.0.to_string();
+            return my_grpc_extensions::GrpcUrl {
+                url: self.url.to_string(),
+                host_metadata: self.host.clone(),
+            };
         }
 
         panic!("Unknown grpc service name: {}", name)
@@ -123,6 +136,7 @@ mod test {
             super::EnvSettingsModel {
                 url: "http://localhost:5000".to_string(),
                 users: "Group1".to_string(),
+                host: Default::default(),
             },
         );
 
@@ -131,6 +145,7 @@ mod test {
             super::EnvSettingsModel {
                 url: "http://localhost:5001".to_string(),
                 users: "Group2".to_string(),
+                host: Default::default(),
             },
         );
 

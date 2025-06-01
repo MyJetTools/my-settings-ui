@@ -14,7 +14,9 @@ pub async fn get_templates(env_id: String) -> Result<Vec<TemplateHttpModel>, Ser
         .get_all(())
         .await
         .unwrap()
-        .unwrap_or_default();
+        .into_vec()
+        .await
+        .unwrap();
 
     let result: BTreeMap<_, _> = response
         .into_iter()

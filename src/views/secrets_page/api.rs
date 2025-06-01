@@ -12,7 +12,9 @@ pub async fn load_secrets(env_id: String) -> Result<Vec<SecretHttpModel>, Server
         .get_all(())
         .await
         .unwrap()
-        .unwrap_or_default();
+        .into_vec()
+        .await
+        .unwrap();
 
     let result = response
         .into_iter()
