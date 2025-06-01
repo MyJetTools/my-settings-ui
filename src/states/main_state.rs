@@ -2,10 +2,7 @@ use std::rc::Rc;
 
 use dioxus_utils::DataState;
 
-use crate::{
-    storage::ENV_LOCAL_STORAGE_KEY,
-    views::{SecretListItemApiModel, TemplateApiModel},
-};
+use crate::{models::*, storage::ENV_LOCAL_STORAGE_KEY};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum LocationState {
@@ -35,8 +32,8 @@ pub struct MainState {
     pub user: String,
     current_env_id: Rc<String>,
     pub location: LocationState,
-    pub templates: DataState<Vec<TemplateApiModel>>,
-    pub secrets: DataState<Vec<SecretListItemApiModel>>,
+    pub templates: DataState<Vec<TemplateHttpModel>>,
+    pub secrets: DataState<Vec<SecretHttpModel>>,
     pub prompt_ssh_key: Option<bool>,
 }
 

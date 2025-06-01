@@ -5,6 +5,7 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 mod dialogs;
+mod models;
 mod states;
 mod storage;
 mod ui_utils;

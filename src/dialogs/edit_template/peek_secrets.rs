@@ -5,10 +5,7 @@ use dioxus::prelude::*;
 use dioxus_utils::DataState;
 use serde::*;
 
-use crate::{
-    icons::*,
-    views::{load_secrets, SecretListItemApiModel},
-};
+use crate::{icons::*, models::SecretHttpModel};
 
 #[component]
 pub fn PeekSecrets(env_id: Rc<String>, yaml: String) -> Element {
@@ -21,7 +18,7 @@ pub fn PeekSecrets(env_id: Rc<String>, yaml: String) -> Element {
             spawn(async move {
                 let env_id = env_id.clone();
                 component_state.write().loaded_secrets = DataState::Loading;
-                match load_secrets(env_id.to_string()).await {
+                match crate::views::secrets_page::api::load_secrets(env_id.to_string()).await {
                     Ok(as_vec) => {
                         let mut values = HashMap::new();
 
@@ -147,7 +144,7 @@ pub fn PeekSecrets(env_id: Rc<String>, yaml: String) -> Element {
 }
 
 pub struct PeekSecretsState {
-    pub loaded_secrets: DataState<HashMap<String, SecretListItemApiModel>>,
+    pub loaded_secrets: DataState<HashMap<String, SecretHttpModel>>,
     pub secrets_values: HashMap<String, SecretApiModel>,
 }
 

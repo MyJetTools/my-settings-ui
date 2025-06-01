@@ -3,12 +3,10 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 use dioxus_utils::DataState;
 
-use crate::views::icons::*;
+use crate::{models::*, views::icons::*};
 
 use super::*;
 use crate::dialogs::*;
-use crate::save_secret;
-use crate::views::{load_secrets, SecretListItemApiModel};
 
 #[component]
 pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> Element {
@@ -23,7 +21,9 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                     let env_id = env_id.clone();
                     spawn(async move {
                         component_state.write().secrets = DataState::Loading;
-                        match load_secrets(env_id.to_string()).await {
+                        match crate::views::secrets_page::api::load_secrets(env_id.to_string())
+                            .await
+                        {
                             Ok(secrets) => {
                                 component_state.write().secrets =
                                     DataState::Loaded(secrets.into_iter().map(Rc::new).collect());
@@ -95,7 +95,12 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                                 )
                             };
                             spawn(async move {
-                                save_secret(env_id.to_string(), secret_name, secret_value, secret_level)
+                                crate::views::secrets_page::api::save_secret(
+                                        env_id.to_string(),
+                                        secret_name,
+                                        secret_value,
+                                        secret_level,
+                                    )
                                     .await
                                     .unwrap();
                             });
@@ -111,7 +116,7 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                         value: component_state_read_access.secret_value.as_str(),
                         oninput: move |cx| {
                             component_state.write().secret_value = cx.value();
-                        }
+                        },
                     }
                     label { "Secret value" }
                 }
@@ -122,11 +127,11 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                         value: component_state_read_access.secret_level.as_str(),
                         oninput: move |cx| {
                             component_state.write().secret_level = cx.value();
-                        }
+                        },
                     }
                     label { "Secret level" }
                 }
-                {btn},
+                {btn}
                 hr {}
                 h4 { "Copy value from other secret" }
                 SelectSecret {
@@ -137,7 +142,7 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                             let result = load_secret(env_id.to_string(), value).await.unwrap();
                             component_state.write().secret_value = result.value;
                         });
-                    }
+                    },
                 }
             }
         }
@@ -184,7 +189,7 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                     let mut write_access = component_state.write();
                     write_access.secret_name = cx.value();
                     write_access.filter = write_access.secret_name.to_lowercase();
-                }
+                },
             }
             {btn}
         }
@@ -198,7 +203,7 @@ pub struct ChooseSecretState {
     pub secret_value: String,
     pub secret_level: String,
     pub mode: ChooseSecretMode,
-    pub secrets: DataState<Vec<Rc<SecretListItemApiModel>>>,
+    pub secrets: DataState<Vec<Rc<SecretHttpModel>>>,
 }
 
 impl ChooseSecretState {
@@ -213,7 +218,7 @@ impl ChooseSecretState {
         }
     }
 
-    pub fn filter_it(&self, item: &SecretListItemApiModel) -> bool {
+    pub fn filter_it(&self, item: &SecretHttpModel) -> bool {
         if self.filter.len() < 3 {
             return false;
         }

@@ -3,9 +3,7 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 use dioxus_utils::DataState;
 
-use crate::views::{load_secrets, SecretListItemApiModel};
-
-use crate::views::icons::*;
+use crate::{models::*, views::icons::*};
 
 #[component]
 pub fn SelectSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> Element {
@@ -18,7 +16,7 @@ pub fn SelectSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
             let env_id = env_id.clone();
             spawn(async move {
                 component_state.write().secrets = DataState::Loading;
-                match load_secrets(env_id.to_string()).await {
+                match crate::views::secrets_page::api::load_secrets(env_id.to_string()).await {
                     Ok(data) => {
                         component_state.write().secrets =
                             DataState::Loaded(data.into_iter().map(Rc::new).collect());
@@ -70,7 +68,7 @@ pub fn SelectSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
             placeholder: "Type secret to fine",
             oninput: move |cx| {
                 component_state.write().filter = cx.value().to_lowercase();
-            }
+            },
         }
 
         div { style: "height:300px; overflow-y: auto;", {content} }
@@ -78,7 +76,7 @@ pub fn SelectSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
 }
 
 pub struct SelectSecretState {
-    secrets: DataState<Vec<Rc<SecretListItemApiModel>>>,
+    secrets: DataState<Vec<Rc<SecretHttpModel>>>,
     filter: String,
 }
 
@@ -90,7 +88,7 @@ impl SelectSecretState {
         }
     }
 
-    pub fn filter_it(&self, item: &SecretListItemApiModel) -> bool {
+    pub fn filter_it(&self, item: &SecretHttpModel) -> bool {
         if self.filter.len() < 3 {
             return false;
         }

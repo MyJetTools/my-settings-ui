@@ -2,11 +2,11 @@ mod left_panel;
 pub use left_panel::*;
 mod right_panel;
 pub use right_panel::*;
-mod templates_list;
-pub use templates_list::*;
+pub mod templates_page;
+
 pub mod icons;
-mod secrets_list;
-pub use secrets_list::*;
+pub mod secrets_page;
+
 mod envs_selector;
 pub use envs_selector::*;
 //mod domains_list;

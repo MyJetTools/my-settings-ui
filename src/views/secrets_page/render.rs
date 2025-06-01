@@ -3,10 +3,9 @@ use std::{rc::Rc, collections::BTreeMap};
 use dioxus::prelude::*;
 
 use dioxus_utils::DataState;
-use serde::*;
 
 use crate::{
-    dialogs::*, states::*, ui_utils::ToastType, views::icons::*
+    dialogs::*, models::*, states::*, ui_utils::ToastType, views::icons::*
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -16,7 +15,7 @@ pub enum OrderBy{
 }
 
 #[component]
-pub fn SecretsList() -> Element {
+pub fn SecretsPage() -> Element {
     let mut main_state = consume_context::<Signal<MainState>>();
 
     let main_state_read_access = main_state.read();
@@ -38,7 +37,7 @@ pub fn SecretsList() -> Element {
         let env_id = env_id.clone();
         spawn(async move{
             main_state.write().secrets = dioxus_utils::DataState::Loading;
-            match load_secrets(env_id.to_string()).await{
+            match crate::views::secrets_page::api::load_secrets(env_id.to_string()).await{
                 Ok(value) => {
                     main_state.write().secrets = dioxus_utils::DataState::Loaded(value);
                 },
@@ -305,7 +304,7 @@ pub fn SecretsList() -> Element {
         }
 
 fn exec_save_secret(env_id: String, result: EditSecretResult){
-    spawn(async move { match save_secret(env_id, result.name, result.value, result.level).await{
+    spawn(async move { match super::api::save_secret(env_id, result.name, result.value, result.level).await{
         Ok(_) => {
             consume_context::<Signal<MainState>>().write().drop_data();
             crate::ui_utils::show_toast("Secret is saved", ToastType::Info);
@@ -317,7 +316,7 @@ fn exec_save_secret(env_id: String, result: EditSecretResult){
 }
 
 fn exec_delete_secret(env_id: String, secret_id: String){
-    spawn(async move { match delete_secret(env_id,secret_id).await{
+    spawn(async move { match super::api::delete_secret(env_id,secret_id).await{
         Ok(_) => {
            consume_context::<Signal<MainState>>().write().drop_data();
             crate::ui_utils::show_toast("Secret is deleted", ToastType::Info);
@@ -329,7 +328,7 @@ fn exec_delete_secret(env_id: String, secret_id: String){
 }
 
 
-fn get_last_edited(secrets: &Vec<SecretListItemApiModel>)->String{
+fn get_last_edited(secrets: &Vec<SecretHttpModel>)->String{
 
     let mut max = 0;
 
@@ -360,7 +359,7 @@ impl SecretsListState{
         }
     }
 
-    pub fn sort<'a>(&self, secrets: impl Iterator<Item = &'a SecretListItemApiModel>)->BTreeMap<String, &'a SecretListItemApiModel>{
+    pub fn sort<'a>(&self, secrets: impl Iterator<Item = &'a SecretHttpModel>)->BTreeMap<String, &'a SecretHttpModel>{
         let mut result = BTreeMap::new();
 
 
@@ -383,59 +382,4 @@ impl SecretsListState{
 
         result
     }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SecretListItemApiModel{
-    pub name: String,
-    pub level: i32, 
-    pub created: i64,
-    pub updated: i64,
-    pub used_by_templates: i32,
-    pub used_by_secrets: i32,
-}
-
-
-#[server]
-pub async fn load_secrets(env_id: String) -> Result<Vec<SecretListItemApiModel>, ServerFnError> {
-    use rust_extensions::date_time::DateTimeAsMicroseconds;
-    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
-
-    let response = ctx.secrets_grpc.get_all(()).await.unwrap().unwrap_or_default();
-
-
-
-
-    let result = response.into_iter().map(|itm|SecretListItemApiModel{
-         name: itm.name, 
-         level: itm.level, 
-         created: DateTimeAsMicroseconds::from_str(itm.created.as_str()).unwrap().unix_microseconds,
-         updated: DateTimeAsMicroseconds::from_str(itm.updated.as_str()).unwrap().unix_microseconds, 
-         used_by_templates: itm.used_by_templates,
-         used_by_secrets: itm.used_by_secrets }).collect();
-
-    Ok(result)
-
-}
-
-#[server]
-pub async fn save_secret(env_id: String, name: String, value: String, level: i32) -> Result<(), ServerFnError> {
-    use crate::server::secrets_grpc::*;
-    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
-
-    ctx.secrets_grpc.save(SaveSecretRequest{ model: SecretModel{ name, value, level }.into() }).await.unwrap();
-    
-    Ok(())
-}
-
-
-#[server]
-async fn delete_secret(env_id: String, secret_id: String) -> Result<(), ServerFnError> {
-    use crate::server::secrets_grpc::*;
-    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
-
-    ctx.secrets_grpc.delete(DeleteSecretRequest{ name: secret_id }).await.unwrap();
- 
-
-    Ok(())
 }

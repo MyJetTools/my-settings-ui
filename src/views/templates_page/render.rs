@@ -1,15 +1,15 @@
 use std::rc::Rc;
 
-use super::icons::*;
+use crate::models::*;
+use crate::views::icons::*;
 use crate::{states::*, ui_utils::ToastType};
 use dioxus::prelude::*;
 
 use crate::dialogs::*;
 use dioxus_utils::DataState;
-use serde::*;
 
 #[component]
-pub fn TemplatesList() -> Element {
+pub fn TemplatesPage() -> Element {
     let mut main_state = consume_context::<Signal<MainState>>();
 
     let main_state_read_access = main_state.read();
@@ -24,7 +24,7 @@ pub fn TemplatesList() -> Element {
             let env_id_request = env_id.clone();
             spawn(async move {
                 main_state.write().templates = dioxus_utils::DataState::Loading;
-                match load_templates(env_id_request.to_string()).await {
+                match super::api::get_templates(env_id_request.to_string()).await {
                     Ok(templates) => {
                         main_state.write().templates = dioxus_utils::DataState::Loaded(templates);
                     }
@@ -225,7 +225,7 @@ pub fn TemplatesList() -> Element {
                                             value: filter_template_read_access.as_str(),
                                             oninput: move |cx| {
                                                 filter_template.write().set_value(cx.value().as_str());
-                                            }
+                                            },
                                         }
                                     }
                                 }
@@ -266,7 +266,7 @@ pub fn TemplatesList() -> Element {
 
 fn exec_save_template(env_id: String, save_template_result: SaveTemplateResult) {
     spawn(async move {
-        match save_template(
+        match super::api::save_template(
             env_id,
             save_template_result.env,
             save_template_result.name,
@@ -288,7 +288,7 @@ fn exec_save_template(env_id: String, save_template_result: SaveTemplateResult) 
 
 fn exec_delete_template(env_id: String, env: String, name: String) {
     spawn(async move {
-        match delete_template(env_id, env, name).await {
+        match super::api::delete_template(env_id, env, name).await {
             Ok(_) => {
                 consume_context::<Signal<DialogState>>().set(DialogState::None);
                 consume_context::<Signal<MainState>>().write().drop_data();
@@ -301,59 +301,7 @@ fn exec_delete_template(env_id: String, env: String, name: String) {
     });
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct TemplateApiModel {
-    pub env: String,
-    pub name: String,
-    pub created: i64,
-    pub updated: i64,
-    pub last_requests: i64,
-    pub has_missing_placeholders: bool,
-}
-
-#[server]
-async fn load_templates(env_id: String) -> Result<Vec<TemplateApiModel>, ServerFnError> {
-    use rust_extensions::date_time::DateTimeAsMicroseconds;
-    use std::collections::BTreeMap;
-
-    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
-
-    let response = ctx
-        .templates_grpc
-        .get_all(())
-        .await
-        .unwrap()
-        .unwrap_or_default();
-
-    let result: BTreeMap<_, _> = response
-        .into_iter()
-        .map(|itm| {
-            (
-                format!("{}/{}", itm.name, itm.env),
-                TemplateApiModel {
-                    env: itm.env,
-                    name: itm.name,
-                    created: match DateTimeAsMicroseconds::from_str(itm.created.as_str()) {
-                        Some(itm) => itm.unix_microseconds,
-                        None => 0,
-                    },
-                    updated: match DateTimeAsMicroseconds::from_str(itm.updated.as_str()) {
-                        Some(itm) => itm.unix_microseconds,
-                        None => 0,
-                    },
-                    last_requests: itm.last_requests,
-                    has_missing_placeholders: itm.has_missing_placeholders,
-                },
-            )
-        })
-        .collect();
-
-    let result = result.into_iter().map(|itm| itm.1).collect();
-
-    Ok(result)
-}
-
-fn get_last_edited(templates: &Vec<TemplateApiModel>) -> (String, String) {
+fn get_last_edited(templates: &Vec<TemplateHttpModel>) -> (String, String) {
     let mut max = 0;
 
     let mut env = "".to_string();
@@ -370,35 +318,4 @@ fn get_last_edited(templates: &Vec<TemplateApiModel>) -> (String, String) {
     }
 
     (env, name)
-}
-
-#[server]
-pub async fn save_template(
-    env_id: String,
-    env: String,
-    name: String,
-    yaml: String,
-) -> Result<(), ServerFnError> {
-    use crate::server::templates_grpc::*;
-    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
-
-    ctx.templates_grpc
-        .save(SaveTemplateRequest { env, name, yaml })
-        .await
-        .unwrap();
-
-    Ok(())
-}
-
-#[server]
-async fn delete_template(env_id: String, env: String, name: String) -> Result<(), ServerFnError> {
-    use crate::server::templates_grpc::*;
-    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
-
-    ctx.templates_grpc
-        .delete(DeleteTemplateRequest { env, name })
-        .await
-        .unwrap();
-
-    Ok(())
 }

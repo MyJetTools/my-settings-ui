@@ -1,4 +1,4 @@
-use crate::TemplateApiModel;
+use crate::models::*;
 
 pub struct FilterTemplate(String);
 
@@ -15,7 +15,7 @@ impl FilterTemplate {
         &self.0
     }
 
-    pub fn filter_record(&self, itm: &TemplateApiModel) -> bool {
+    pub fn filter_record(&self, itm: &TemplateHttpModel) -> bool {
         if self.0.len() == 0 {
             return true;
         }

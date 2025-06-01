@@ -1,4 +1,4 @@
-use crate::SecretListItemApiModel;
+use crate::models::*;
 
 pub struct FilterSecret(String);
 
@@ -15,7 +15,7 @@ impl FilterSecret {
         &self.0
     }
 
-    pub fn filter(&self, itm: &SecretListItemApiModel) -> bool {
+    pub fn filter(&self, itm: &SecretHttpModel) -> bool {
         if self.0.len() == 0 {
             return true;
         }

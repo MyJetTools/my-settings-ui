@@ -13,10 +13,10 @@ pub fn RightPanel() -> Element {
             rsx!(div {})
         }
         LocationState::Templates => {
-            rsx!(TemplatesList {})
+            rsx!(crate::views::templates_page::TemplatesPage {})
         }
         LocationState::Secrets => {
-            rsx!(SecretsList {})
+            rsx!(crate::views::secrets_page::SecretsPage {})
         }
     }
 }
