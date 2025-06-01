@@ -184,6 +184,7 @@ pub fn EditTemplate(
                         let result = read_access.unwrap_into_http_model();
                         on_ok.call(result);
                     },
+                    "Save"
                 }
             },
         }
