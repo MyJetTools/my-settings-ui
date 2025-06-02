@@ -52,7 +52,7 @@ impl EditTemplateState {
                 }),
                 tabs: Default::default(),
                 env_id,
-                env: Default::default(),
+                env: DialogValue::new(template.env.to_string()),
                 name: Default::default(),
                 yaml: Default::default(),
                 init_data: data,
