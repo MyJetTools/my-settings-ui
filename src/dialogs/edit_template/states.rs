@@ -69,6 +69,7 @@ impl EditTemplateState {
     pub fn is_new_template(&self) -> bool {
         match self.init_data {
             EditTemplateDialogData::New => true,
+            EditTemplateDialogData::CopyFromOtherTemplate(_) => true,
             _ => false,
         }
     }

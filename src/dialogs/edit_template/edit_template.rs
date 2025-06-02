@@ -19,56 +19,10 @@ pub fn EditTemplate(
     let cs_read_access = component_state.read();
 
     if let Some(init_data) = cs_read_access.init_from_other_template.as_ref() {
-        match &init_data.init_status {
-            DataState::None => {
-                let env_id = cs_read_access.env_id.clone();
-                let env = init_data.src_template.env.to_string();
-                let name = init_data.src_template.name.to_string();
-                spawn(async move {
-                    component_state
-                        .write()
-                        .init_from_other_template
-                        .as_mut()
-                        .unwrap()
-                        .init_status = DataState::Loading;
-                    match crate::api::templates::get_template_content(env_id.to_string(), env, name)
-                        .await
-                    {
-                        Ok(data) => {
-                            let mut write_access = component_state.write();
-                            write_access.yaml.init(data);
-                            write_access
-                                .init_from_other_template
-                                .as_mut()
-                                .unwrap()
-                                .init_status
-                                .set_value(());
-                        }
-                        Err(err) => {
-                            component_state
-                                .write()
-                                .init_from_other_template
-                                .as_mut()
-                                .unwrap()
-                                .init_status
-                                .set_error(err.to_string());
-                        }
-                    }
-                });
-                return rsx! {
-                    LoadingIcon {}
-                };
-            }
-            DataState::Loading => {
-                return rsx! {
-                    LoadingIcon {}
-                };
-            }
-            DataState::Loaded(_) => {}
-            DataState::Error(err) => {
-                return rsx! {
-                    div { {err.as_str()} }
-                }
+        match get_data(component_state, &cs_read_access, init_data) {
+            Ok(_) => (),
+            Err(err) => {
+                return err;
             }
         }
     }
@@ -187,6 +141,65 @@ pub fn EditTemplate(
                     "Save"
                 }
             },
+        }
+    }
+}
+
+fn get_data(
+    mut component_state: Signal<EditTemplateState>,
+    cs_read_access: &EditTemplateState,
+    init_data: &LoadDataFromTemplate,
+) -> Result<(), Element> {
+    match &init_data.init_status {
+        DataState::None => {
+            let env_id = cs_read_access.env_id.clone();
+            let env = init_data.src_template.env.to_string();
+            let name = init_data.src_template.name.to_string();
+            spawn(async move {
+                component_state
+                    .write()
+                    .init_from_other_template
+                    .as_mut()
+                    .unwrap()
+                    .init_status = DataState::Loading;
+                match crate::api::templates::get_template_content(env_id.to_string(), env, name)
+                    .await
+                {
+                    Ok(data) => {
+                        let mut write_access = component_state.write();
+                        write_access.yaml.init(data);
+                        write_access
+                            .init_from_other_template
+                            .as_mut()
+                            .unwrap()
+                            .init_status
+                            .set_value(());
+                    }
+                    Err(err) => {
+                        component_state
+                            .write()
+                            .init_from_other_template
+                            .as_mut()
+                            .unwrap()
+                            .init_status
+                            .set_error(err.to_string());
+                    }
+                }
+            });
+            return Err(rsx! {
+                LoadingIcon {}
+            });
+        }
+        DataState::Loading => {
+            return Err(rsx! {
+                LoadingIcon {}
+            });
+        }
+        DataState::Loaded(_) => Ok(()),
+        DataState::Error(err) => {
+            return Err(rsx! {
+                div { {err.as_str()} }
+            })
         }
     }
 }
