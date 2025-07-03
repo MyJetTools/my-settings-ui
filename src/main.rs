@@ -6,6 +6,7 @@ use dioxus::prelude::*;
 
 mod api;
 mod dialogs;
+mod icons;
 mod models;
 mod states;
 mod storage;
@@ -13,13 +14,12 @@ mod ui_utils;
 mod utils;
 mod views;
 use dioxus_utils::DataState;
-use icons::LoadingIcon;
 use serde::*;
-use views::*;
+
 #[cfg(feature = "server")]
 mod server;
 
-use crate::states::*;
+use crate::{icons::*, states::*};
 
 #[derive(Routable, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum AppRoute {

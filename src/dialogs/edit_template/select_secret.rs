@@ -3,7 +3,7 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 use dioxus_utils::DataState;
 
-use crate::{models::*, views::icons::*};
+use crate::{icons::*, models::*};
 
 #[component]
 pub fn SelectSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> Element {

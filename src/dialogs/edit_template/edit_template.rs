@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use dioxus_utils::DataState;
 
-use crate::{dialogs::*, models::*, views::icons::*};
+use crate::{dialogs::*, icons::*, models::*};
 
 use super::states::*;
 

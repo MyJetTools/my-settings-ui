@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use dioxus_utils::DataState;
 use serde::*;
 
-use crate::{dialogs::*, views::icons::*};
+use crate::{dialogs::*, icons::*};
 
 #[component]
 pub fn ShowSecretUsageBySecret(env_id: Rc<String>, secret: Rc<String>) -> Element {

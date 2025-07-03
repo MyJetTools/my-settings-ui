@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use dioxus_utils::DataState;
 use serde::*;
 
-use crate::views::icons::*;
+use crate::icons::*;
 
 use super::*;
 
@@ -64,7 +64,7 @@ pub fn EditSecret(
                 oninput: move |cx| {
                     component_state.write().name = cx.value();
                 },
-                value: component_state_read_access.name.as_str()
+                value: component_state_read_access.name.as_str(),
             }
             label { "Secret name" }
         }
@@ -75,7 +75,7 @@ pub fn EditSecret(
                 oninput: move |cx| {
                     component_state.write().value.value = cx.value();
                 },
-                value: component_state_read_access.value.value.as_str()
+                value: component_state_read_access.value.value.as_str(),
             }
             label { "Secret value" }
         }
@@ -87,7 +87,7 @@ pub fn EditSecret(
                 oninput: move |cx| {
                     component_state.write().value.level = cx.value();
                 },
-                value: component_state_read_access.value.level.as_str()
+                value: component_state_read_access.value.level.as_str(),
             }
             label { "Secret level" }
         }
@@ -110,7 +110,7 @@ pub fn EditSecret(
                     OkButtonIcon {}
                     "Save"
                 }
-            }
+            },
         }
     }
 }

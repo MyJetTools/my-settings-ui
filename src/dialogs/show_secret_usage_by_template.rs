@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use dioxus_utils::DataState;
 use serde::*;
 
-use crate::views::icons::*;
+use crate::icons::*;
 
 use super::*;
 

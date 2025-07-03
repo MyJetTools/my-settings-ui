@@ -1,7 +1,6 @@
 use dioxus::prelude::*;
 
-#[component]
-pub fn ViewTemplateIcon() -> Element {
+pub fn view_template_icon() -> Element {
     rsx! {
         img { class: "btn-icon-sm", src: "/assets/img/ico-view.svg" }
     }

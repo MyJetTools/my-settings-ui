@@ -1,16 +1,21 @@
 use std::rc::Rc;
 
 use crate::dialogs::states::EditTemplateDialogData;
+use crate::icons::*;
 use crate::models::*;
-use crate::views::icons::*;
 use crate::{states::*, ui_utils::ToastType};
 use dioxus::prelude::*;
 
 use crate::dialogs::*;
 use dioxus_utils::DataState;
 
+use super::state::*;
+
 #[component]
 pub fn TemplatesPage() -> Element {
+    let mut cs = use_signal(|| TemplatesState::default());
+
+    let cs_ra = cs.read();
     let mut main_state = consume_context::<Signal<MainState>>();
 
     let main_state_read_access = main_state.read();
@@ -88,6 +93,10 @@ pub fn TemplatesPage() -> Element {
             let env_id_delete = env_id_to_copy.clone();
             let env_id_show_populated_yaml = env_id_to_copy.clone();
 
+            let env_id_select = env_id_to_copy.clone();
+
+            let name_select = name.clone();
+
             let last_edited = if last_edited.0.as_str() == env.as_str()
                 && last_edited.1.as_str() == name.as_str()
             {
@@ -153,9 +162,21 @@ pub fn TemplatesPage() -> Element {
                 }
             };
 
+            let selected = cs_ra.is_selected(itm.env.as_str(), itm.name.as_str());
+
+            let selected = crate::icons::render_bool_checkbox(selected);
+
             rsx! {
                 tr { style: "border-top: 1px solid lightgray",
                     td { {alert} }
+                    td {
+                        div {
+                            onclick: move |_| {
+                                cs.write().set_selected(env_id_select.as_str(), name_select.as_str());
+                            },
+                            {selected}
+                        }
+                    }
                     td { "{itm.env}" }
                     td { "/" }
                     td {
@@ -180,7 +201,7 @@ pub fn TemplatesPage() -> Element {
                                             name,
                                         });
                                 },
-                                ViewTemplateIcon {}
+                                {view_template_icon()}
                             }
 
                             {copy_from_template_btn}
@@ -237,6 +258,7 @@ pub fn TemplatesPage() -> Element {
         table { class: "table table-striped", style: "text-align: left;",
             thead {
                 tr {
+                    th {}
                     th {}
                     th { "Env" }
                     th {}

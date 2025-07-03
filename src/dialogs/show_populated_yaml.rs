@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 use dioxus_utils::DataState;
 use serde::*;
 
-use crate::{dialogs::*, views::icons::*};
+use crate::{dialogs::*, icons::*};
 
 #[component]
 pub fn ShowPopulatedYaml(env_id: Rc<String>, env: Rc<String>, name: Rc<String>) -> Element {

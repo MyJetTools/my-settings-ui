@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use dioxus_utils::DataState;
 
 use crate::{
-    dialogs::*, models::*, states::*, ui_utils::ToastType, views::icons::*
+    dialogs::*, models::*, states::*, ui_utils::ToastType, icons::*
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -197,7 +197,7 @@ pub fn SecretsPage() -> Element {
                                                 secret,
                                             });
                                     },
-                                    ViewTemplateIcon {}
+                                    {view_template_icon()}
                                 }
                                 button {
                                     class: "btn btn-sm btn-primary",

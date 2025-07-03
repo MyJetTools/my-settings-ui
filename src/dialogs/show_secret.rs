@@ -5,7 +5,7 @@ use dioxus_utils::DataState;
 use serde::*;
 
 use crate::dialogs::*;
-use crate::views::icons::*;
+use crate::icons::*;
 
 #[component]
 pub fn ShowSecret(env_id: Rc<String>, secret: Rc<String>) -> Element {
@@ -42,7 +42,7 @@ pub fn ShowSecret(env_id: Rc<String>, secret: Rc<String>) -> Element {
                 input {
                     class: "form-control",
                     readonly: true,
-                    value: value.as_str()
+                    value: value.as_str(),
                 }
                 label { "Secret value" }
             }
