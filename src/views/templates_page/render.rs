@@ -164,20 +164,14 @@ pub fn TemplatesPage() -> Element {
 
             let selected = cs_ra.is_selected(itm.env.as_str(), itm.name.as_str());
 
-            let selected = crate::icons::render_bool_checkbox(selected);
+            let selected = crate::icons::render_bool_checkbox(selected, EventHandler::new(move |value|{
+                cs.write().set_selected(env_id_select.as_str(), name_select.as_str(), value);
+            }));
 
             rsx! {
                 tr { style: "border-top: 1px solid lightgray",
                     td { {alert} }
-                    td {
-                        div {
-                            style: "cursor:pointer",
-                            onclick: move |_| {
-                                cs.write().set_selected(env_id_select.as_str(), name_select.as_str());
-                            },
-                            {selected}
-                        }
-                    }
+                    td { {selected} }
                     td { "{itm.env}" }
                     td { "/" }
                     td {

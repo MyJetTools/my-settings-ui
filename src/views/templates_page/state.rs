@@ -14,13 +14,13 @@ impl TemplatesState {
         self.selected.contains(id.as_str())
     }
 
-    pub fn set_selected(&mut self, env: &str, template_id: &str) {
+    pub fn set_selected(&mut self, env: &str, template_id: &str, value: bool) {
         let id = generate_id(env, template_id);
 
-        if self.selected.contains(id.as_str()) {
-            self.selected.remove(id.as_str());
-        } else {
+        if value {
             self.selected.insert(id.to_string());
+        } else {
+            self.selected.remove(id.as_str());
         }
     }
 }
