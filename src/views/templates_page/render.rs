@@ -168,10 +168,18 @@ pub fn TemplatesPage() -> Element {
                 cs.write().set_selected(env_id_select.as_str(), name_select.as_str(), value);
             }));
 
+
+            let items = cs_ra.selected.iter().map(|itm|rsx!{
+                {itm.as_str()}
+            });
+
             rsx! {
                 tr { style: "border-top: 1px solid lightgray",
                     td { {alert} }
-                    td { {selected} }
+                    td {
+                        {selected}
+                        {items}
+                    }
                     td { "{itm.env}" }
                     td { "/" }
                     td {
