@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use rust_extensions::ShortString;
+
 #[derive(Default)]
 pub struct TemplatesState {
     pub selected: HashMap<String, ()>,
@@ -23,6 +25,12 @@ impl TemplatesState {
     }
 }
 
-fn generate_id(env: &str, template_id: &str) -> String {
-    format!("{}/{}", env, template_id)
+fn generate_id(env: &str, template_id: &str) -> ShortString {
+    let mut result = ShortString::new_empty();
+
+    result.push_str(env);
+    result.push('/');
+    result.push_str(template_id);
+
+    result
 }

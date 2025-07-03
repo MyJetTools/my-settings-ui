@@ -162,7 +162,7 @@ pub fn TemplatesPage() -> Element {
                 }
             };
 
-            let selected = cs_ra.is_selected(itm.env.as_str(), itm.name.as_str());
+            let selected = cs_ra.is_selected(env_id_select.as_str(), name_select.as_str());
 
             let selected = crate::icons::render_bool_checkbox(selected, EventHandler::new(move |value|{
                 cs.write().set_selected(env_id_select.as_str(), name_select.as_str(), value);
