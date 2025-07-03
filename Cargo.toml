@@ -61,8 +61,8 @@ serde_yaml = { version = "*", optional = true }
 futures = { version = "*", optional = true }
 tonic = { version = "*", features = ["prost"], optional = true }
 anyhow = { version = "*", optional = true }
-prost = { version = "*", optional = true }
-prost-types = { version = "*", optional = true }
+prost = { version = "0.13", optional = true }
+prost-types = { version = "0.13", optional = true }
 async-trait = { version = "*", optional = true }
 lazy_static = { version = "*", optional = true }
 flurl = { tag = "0.6.1", git = "https://github.com/MyJetTools/fl-url.git", optional = true }
