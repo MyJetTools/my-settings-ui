@@ -171,6 +171,7 @@ pub fn TemplatesPage() -> Element {
                     td { {alert} }
                     td {
                         div {
+                            style: "cursor:pointer",
                             onclick: move |_| {
                                 cs.write().set_selected(env_id_select.as_str(), name_select.as_str());
                             },
