@@ -169,17 +169,10 @@ pub fn TemplatesPage() -> Element {
             }));
 
 
-            let items = cs_ra.selected.keys().map(|itm|rsx!{
-                {itm.as_str()}
-            });
-
             rsx! {
                 tr { style: "border-top: 1px solid lightgray",
                     td { {alert} }
-                    td {
-                        {selected}
-                        {items}
-                    }
+                    td { {selected} }
                     td { "{itm.env}" }
                     td { "/" }
                     td {
