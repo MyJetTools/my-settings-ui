@@ -4,19 +4,18 @@ pub fn render_bool_checkbox(enabled: bool, onclick: EventHandler<bool>) -> Eleme
     if enabled {
         rsx! {
             img {
-                style: "cursor: pointer",
+                style: "cursor: pointer;width: 20px; height: 20px;",
                 src: "/assets/img/enabled.webp",
                 onclick: move |_| { onclick.call(false) },
-                style: "width: 20px; height: 20px;",
+
             }
         }
     } else {
         rsx! {
             img {
-                style: "cursor: pointer",
+                style: "cursor: pointer;width: 20px; height: 20px;",
                 src: "/assets/img/unchecked.webp",
-                onclick: move |_| { onclick.call(false) },
-                style: "width: 20px; height: 20px;",
+                onclick: move |_| { onclick.call(true) },
             }
         }
     }
