@@ -169,7 +169,7 @@ pub fn TemplatesPage() -> Element {
             }));
 
 
-            let items = cs_ra.selected.iter().map(|itm|rsx!{
+            let items = cs_ra.selected.keys().map(|itm|rsx!{
                 {itm.as_str()}
             });
 
