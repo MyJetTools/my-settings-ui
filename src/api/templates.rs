@@ -166,3 +166,39 @@ pub async fn upload_snapshot(env_id: String, snapshot: String) -> Result<(), Ser
 
     Ok(())
 }
+
+#[server]
+pub async fn copy_template_to_other_env(
+    from_env_id: String,
+    to_env_id: String,
+    env: String,
+    name: String,
+) -> Result<(), ServerFnError> {
+    use crate::server::templates_grpc::*;
+    let from_env_ctx = crate::server::APP_CTX
+        .get_app_ctx(from_env_id.as_str())
+        .await;
+
+    let to_env_ctx = crate::server::APP_CTX.get_app_ctx(to_env_id.as_str()).await;
+
+    let template_response = from_env_ctx
+        .templates_grpc
+        .get(GetTemplateRequest {
+            env: env.to_string(),
+            name: name.to_string(),
+        })
+        .await
+        .unwrap();
+
+    to_env_ctx
+        .templates_grpc
+        .save(SaveTemplateRequest {
+            env: env,
+            name: name,
+            yaml: template_response.yaml,
+        })
+        .await
+        .unwrap();
+
+    Ok(())
+}
