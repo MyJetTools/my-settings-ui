@@ -22,7 +22,7 @@ pub fn TemplatesPage() -> Element {
 
     let selected_env = main_state_read_access.get_selected_env();
 
-    let env_id_to_copy = selected_env.clone();
+    let selected_env_id_to_copy = selected_env.clone();
 
     let mut filter_template = consume_context::<Signal<FilterTemplate>>();
     let filter_template_read_access = filter_template.read();
@@ -88,12 +88,12 @@ pub fn TemplatesPage() -> Element {
             let delete_template_env = env.clone();
             let delete_template_name = name.clone();
 
-            let env_id_edit = env_id_to_copy.clone();
-            let env_id_copy = env_id_to_copy.clone();
-            let env_id_delete = env_id_to_copy.clone();
-            let env_id_show_populated_yaml = env_id_to_copy.clone();
+            let env_id_edit = selected_env_id_to_copy.clone();
+            let env_id_copy = selected_env_id_to_copy.clone();
+            let env_id_delete = selected_env_id_to_copy.clone();
+            let env_id_show_populated_yaml = selected_env_id_to_copy.clone();
 
-            let env_id_select = env_id_to_copy.clone();
+            let env_id_select = env.clone();
 
             let name_select = name.clone();
 
@@ -162,7 +162,7 @@ pub fn TemplatesPage() -> Element {
                 }
             };
 
-            let selected = cs_ra.is_selected(env_id_select.as_str(), name_select.as_str());
+            let selected = cs_ra.is_selected(&env_id_select.as_str(), name_select.as_str());
 
             let selected = crate::icons::render_bool_checkbox(selected, EventHandler::new(move |value|{
                 cs.write().set_selected(env_id_select.as_str(), name_select.as_str(), value);
@@ -280,8 +280,8 @@ pub fn TemplatesPage() -> Element {
         table { class: "table table-striped", style: "text-align: left;",
             thead {
                 tr {
-                    th { {export_btn} }
                     th {}
+                    th { {export_btn} }
                     th { "Env" }
                     th {}
                     th {
