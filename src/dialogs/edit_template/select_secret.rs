@@ -16,7 +16,7 @@ pub fn SelectSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
             let env_id = env_id.clone();
             spawn(async move {
                 component_state.write().secrets = DataState::Loading;
-                match crate::views::secrets_page::api::load_secrets(env_id.to_string()).await {
+                match crate::api::secrets::load_secrets(env_id.to_string()).await {
                     Ok(data) => {
                         component_state.write().secrets =
                             DataState::Loaded(data.into_iter().map(Rc::new).collect());

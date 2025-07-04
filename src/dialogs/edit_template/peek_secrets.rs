@@ -3,9 +3,8 @@ use std::{collections::HashMap, rc::Rc};
 use dioxus::prelude::*;
 
 use dioxus_utils::DataState;
-use serde::*;
 
-use crate::{icons::*, models::SecretHttpModel};
+use crate::{icons::*, models::*};
 
 #[component]
 pub fn PeekSecrets(env_id: Rc<String>, yaml: String) -> Element {
@@ -18,7 +17,7 @@ pub fn PeekSecrets(env_id: Rc<String>, yaml: String) -> Element {
             spawn(async move {
                 let env_id = env_id.clone();
                 component_state.write().loaded_secrets = DataState::Loading;
-                match crate::views::secrets_page::api::load_secrets(env_id.to_string()).await {
+                match crate::api::secrets::load_secrets(env_id.to_string()).await {
                     Ok(as_vec) => {
                         let mut values = HashMap::new();
 
@@ -92,7 +91,10 @@ pub fn PeekSecrets(env_id: Rc<String>, yaml: String) -> Element {
                                         let env_id = env_id.clone();
                                         let secret_name = secret_name_to_load.clone();
                                         spawn(async move {
-                                            let secret_model = load_secret(env_id.to_string(), secret_name.to_string())
+                                            let secret_model = crate::api::secrets::load_secret(
+                                                    env_id.to_string(),
+                                                    secret_name.to_string(),
+                                                )
                                                 .await;
                                             if let Ok(secret_model) = secret_model {
                                                 if secret_model.name.as_str().len() > 0 {
@@ -159,48 +161,4 @@ impl PeekSecretsState {
     pub fn insert_secret_value(&mut self, name: String, value: SecretApiModel) {
         self.secrets_values.insert(name, value);
     }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SecretApiModel {
-    pub name: String,
-    pub value: String,
-    pub level: i32,
-}
-
-#[server]
-async fn load_secret(env_id: String, secret_name: String) -> Result<SecretApiModel, ServerFnError> {
-    use crate::server::secrets_grpc::*;
-    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
-
-    let response = ctx
-        .secrets_grpc
-        .get(GetSecretRequest {
-            name: secret_name.to_string(),
-        })
-        .await
-        .unwrap();
-
-    let result = SecretApiModel {
-        name: secret_name,
-        value: response.value,
-        level: response.level,
-    };
-
-    Ok(result)
-
-    /*
-    if secret_model.name.len() > 0 {
-        secrets.modify(|itm| {
-            let mut secrets = itm.clone();
-            secrets.insert(secret_name, secret_model);
-            secrets
-        });
-    }
-
-    let secret_name = secret_name.to_string();
-    let secrets = secrets.to_owned();
-
-    cx.spawn(async move {});
-     */
 }

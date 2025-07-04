@@ -67,3 +67,60 @@ pub async fn delete_secret(env_id: String, secret_id: String) -> Result<(), Serv
 
     Ok(())
 }
+
+#[server]
+pub async fn load_secret(
+    env_id: String,
+    secret_name: String,
+) -> Result<SecretApiModel, ServerFnError> {
+    use crate::server::secrets_grpc::*;
+    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
+
+    let response = ctx
+        .secrets_grpc
+        .get(GetSecretRequest {
+            name: secret_name.to_string(),
+        })
+        .await
+        .unwrap();
+
+    let result = SecretApiModel {
+        name: secret_name,
+        value: response.value,
+        level: response.level,
+    };
+
+    Ok(result)
+}
+
+#[server]
+pub async fn copy_secret_to_other_env(
+    from_env_id: String,
+    to_env_id: String,
+    secret_id: String,
+) -> Result<(), ServerFnError> {
+    use crate::server::secrets_grpc::*;
+    let from_env_ctx = crate::server::APP_CTX
+        .get_app_ctx(from_env_id.as_str())
+        .await;
+
+    let to_env_ctx = crate::server::APP_CTX.get_app_ctx(to_env_id.as_str()).await;
+
+    let secret_model = from_env_ctx
+        .secrets_grpc
+        .get(GetSecretRequest {
+            name: secret_id.to_string(),
+        })
+        .await
+        .unwrap();
+
+    to_env_ctx
+        .secrets_grpc
+        .save(SaveSecretRequest {
+            model: Some(secret_model),
+        })
+        .await
+        .unwrap();
+
+    Ok(())
+}

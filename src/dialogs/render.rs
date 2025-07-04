@@ -72,5 +72,11 @@ pub fn RenderDialog() -> Element {
                 SnapshotToImport { on_ok }
             }
         }
+
+        DialogState::CopyToEnvConfirmation { from_env_id, on_ok } => {
+            rsx! {
+                CopyToEnvDialog { from_env_id, on_ok }
+            }
+        }
     }
 }
