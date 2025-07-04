@@ -254,7 +254,11 @@ pub fn TemplatesPage() -> Element {
         rsx! {
             button {
                 class: "btn btn-sm btn-primary",
-                onclick: move |_| { download_file() },
+                onclick: move |_| {
+                    spawn(async {
+                        let _ = download_file().await;
+                    });
+                },
                 "Export"
             }
         }
@@ -350,22 +354,9 @@ fn get_last_edited(templates: &Vec<Rc<TemplateHttpModel>>) -> (String, String) {
     (env, name)
 }
 
-fn download_file() {
-    use rfd::FileDialog;
-    // File content
-    let content = "Hello, this is a sample file content!".to_string();
-
-    // Open a file save dialog
-    if let Some(path) = FileDialog::new()
-        .set_file_name("sample.txt")
-        .add_filter("Text", &["txt"])
-        .save_file()
-    {
-        // Write the content to the selected file
-        if let Err(e) = std::fs::write(&path, content) {
-            eprintln!("Failed to write file: {}", e);
-        } else {
-            println!("File saved to {:?}", path);
-        }
-    }
+// Server function to serve the file
+#[server(GET)]
+async fn download_file() -> Result<Vec<u8>, ServerFnError> {
+    let content = b"Hello, this is your file!".to_vec();
+    Ok(content)
 }
