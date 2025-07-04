@@ -250,6 +250,14 @@ pub fn TemplatesPage() -> Element {
         }
     };
 
+    let export_btn = if cs_ra.has_selected() {
+        rsx! {
+            button { class: "btn btn-sm btn-primary", "Export" }
+        }
+    } else {
+        rsx! {}
+    };
+
     rsx! {
         table { class: "table table-striped", style: "text-align: left;",
             thead {
@@ -280,7 +288,10 @@ pub fn TemplatesPage() -> Element {
                     th { "Created" }
                     th { "Updated" }
                     th { "Last request" }
-                    th { {add_btn} }
+                    th {
+                        {add_btn}
+                        {export_btn}
+                    }
                 }
             }
 

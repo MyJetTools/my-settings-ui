@@ -23,6 +23,10 @@ impl TemplatesState {
             self.selected.remove(id.as_str());
         }
     }
+
+    pub fn has_selected(&self) -> bool {
+        self.selected.len() > 0
+    }
 }
 
 fn generate_id(env: &str, template_id: &str) -> ShortString {
