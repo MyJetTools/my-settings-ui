@@ -41,5 +41,7 @@ pub enum DialogState {
         env_id: Rc<String>,
         secret: Rc<String>,
     },
-    ShowTemplateToExport(Rc<String>),
+    SnapshotToExport(Rc<String>),
+
+    SnapshotToImport(EventHandler<String>),
 }

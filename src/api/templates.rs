@@ -138,3 +138,31 @@ pub async fn download_snapshot(
 
     Ok(serde_yaml::to_string(&result).unwrap())
 }
+
+#[server]
+pub async fn upload_snapshot(env_id: String, snapshot: String) -> Result<(), ServerFnError> {
+    use crate::server::templates_grpc::*;
+    use rust_extensions::base64::*;
+
+    let mut data: Vec<ExportItem> = serde_yaml::from_str(&snapshot).unwrap();
+
+    for itm in data.iter_mut() {
+        let data = itm.yaml.from_base64().unwrap();
+        itm.yaml = String::from_utf8(data).unwrap();
+    }
+
+    let ctx = crate::server::APP_CTX.get_app_ctx(&env_id).await;
+
+    for itm in data {
+        ctx.templates_grpc
+            .save(SaveTemplateRequest {
+                env: itm.env,
+                name: itm.name,
+                yaml: itm.yaml,
+            })
+            .await
+            .unwrap();
+    }
+
+    Ok(())
+}

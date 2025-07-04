@@ -61,9 +61,15 @@ pub fn RenderDialog() -> Element {
             }
         }
 
-        DialogState::ShowTemplateToExport(yaml) => {
+        DialogState::SnapshotToExport(yaml) => {
             rsx! {
                 ShowTemplateToExport { yaml }
+            }
+        }
+
+        DialogState::SnapshotToImport(on_ok) => {
+            rsx! {
+                SnapshotToImport { on_ok }
             }
         }
     }

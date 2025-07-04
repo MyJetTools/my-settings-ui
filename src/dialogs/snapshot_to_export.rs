@@ -8,7 +8,7 @@ use crate::dialogs::*;
 pub fn ShowTemplateToExport(yaml: Rc<String>) -> Element {
     rsx! {
         DialogTemplate {
-            header: "Populated yaml",
+            header: "Snapshot to export",
             allocate_max_space: true,
             content: rsx! {
                 textarea { class: "form-control modal-content-full-screen", readonly: true, {yaml.as_str()} }

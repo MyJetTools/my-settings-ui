@@ -269,7 +269,7 @@ pub fn TemplatesPage() -> Element {
                             .await
                             .unwrap();
                         consume_context::<Signal<DialogState>>()
-                            .set(DialogState::ShowTemplateToExport(Rc::new(yaml)));
+                            .set(DialogState::SnapshotToExport(Rc::new(yaml)));
                     });
                 },
                 "Export"
@@ -277,6 +277,38 @@ pub fn TemplatesPage() -> Element {
         }
     } else {
         rsx! {}
+    };
+
+    let selected_env_id = selected_env.clone();
+    let import_btn = rsx! {
+        button {
+            class: "btn btn-sm btn-primary",
+            onclick: move |_| {
+                let env_id = selected_env_id.clone();
+                consume_context::<Signal<DialogState>>()
+                    .set(
+                        DialogState::SnapshotToImport(
+                            EventHandler::new(move |value| {
+                                let env_id = env_id.clone();
+                                spawn(async move {
+                                    crate::api::templates::upload_snapshot(
+                                            env_id.to_string(),
+                                            value,
+                                        )
+                                        .await
+                                        .unwrap();
+                                    consume_context::<Signal<MainState>>().write().drop_data();
+                                    crate::ui_utils::show_toast(
+                                        "Templates are uploaded",
+                                        ToastType::Info,
+                                    );
+                                });
+                            }),
+                        ),
+                    );
+            },
+            "Import"
+        }
     };
 
     rsx! {
@@ -309,7 +341,10 @@ pub fn TemplatesPage() -> Element {
                     th { "Created" }
                     th { "Updated" }
                     th { "Last request" }
-                    th { {add_btn} }
+                    th {
+                        {add_btn}
+                        {import_btn}
+                    }
                 }
             }
 

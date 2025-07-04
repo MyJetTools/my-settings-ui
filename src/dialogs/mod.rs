@@ -14,8 +14,8 @@ mod edit_template;
 pub use edit_template::*;
 mod show_populated_yaml;
 pub use show_populated_yaml::*;
-mod show_template_to_export;
-pub use show_template_to_export::*;
+mod snapshot_to_export;
+pub use snapshot_to_export::*;
 //mod delete_template;
 //pub use delete_template::*;
 //mod edit_domain_product;
@@ -34,3 +34,6 @@ pub use confirmation_dialog::*;
 
 mod dialog_state;
 pub use dialog_state::*;
+
+mod snapshot_to_import;
+pub use snapshot_to_import::*;
