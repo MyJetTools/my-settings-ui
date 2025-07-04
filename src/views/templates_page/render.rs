@@ -20,16 +20,16 @@ pub fn TemplatesPage() -> Element {
 
     let main_state_read_access = main_state.read();
 
-    let env_id = main_state_read_access.get_selected_env();
+    let selected_env = main_state_read_access.get_selected_env();
 
-    let env_id_to_copy = env_id.clone();
+    let env_id_to_copy = selected_env.clone();
 
     let mut filter_template = consume_context::<Signal<FilterTemplate>>();
     let filter_template_read_access = filter_template.read();
 
     let templates = match &main_state_read_access.templates {
         dioxus_utils::DataState::None => {
-            let env_id_request = env_id.clone();
+            let env_id_request = selected_env.clone();
             spawn(async move {
                 main_state.write().templates = dioxus_utils::DataState::Loading;
                 match crate::api::templates::get_templates(env_id_request.to_string()).await {
@@ -232,11 +232,13 @@ pub fn TemplatesPage() -> Element {
             }
         });
 
+    let selected_env_spawned = selected_env.clone();
+
     let add_btn = rsx! {
         button {
             class: "btn btn-sm btn-primary",
             onclick: move |_| {
-                let env_id = env_id.clone();
+                let env_id = selected_env_spawned.clone();
                 consume_context::<Signal<DialogState>>()
                     .set(DialogState::EditTemplate {
                         env_id: env_id.clone(),
@@ -250,13 +252,21 @@ pub fn TemplatesPage() -> Element {
         }
     };
 
+    let selected_env_id = selected_env.clone();
+
     let export_btn = if cs_ra.has_selected() {
         rsx! {
             button {
                 class: "btn btn-sm btn-primary",
                 onclick: move |_| {
-                    spawn(async {
-                        let _ = download_file().await;
+                    let selected_env_id = selected_env_id.clone();
+                    spawn(async move {
+                        let request = cs.read().get_request_data();
+                        let _ = crate::api::templates::download_template(
+                                selected_env_id.to_string(),
+                                request,
+                            )
+                            .await;
                     });
                 },
                 "Export"
@@ -352,11 +362,4 @@ fn get_last_edited(templates: &Vec<Rc<TemplateHttpModel>>) -> (String, String) {
     }
 
     (env, name)
-}
-
-// Server function to serve the file
-#[server(GET)]
-async fn download_file() -> Result<Vec<u8>, ServerFnError> {
-    let content = b"Hello, this is your file!".to_vec();
-    Ok(content)
 }

@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use rust_extensions::base64::IntoBase64;
 
 use crate::models::*;
 
@@ -98,4 +99,42 @@ pub async fn get_template_content(
         .await
         .unwrap();
     Ok(response.yaml)
+}
+
+#[server]
+pub async fn download_template(
+    env_id: String,
+    request: Vec<DownloadFileRequestModel>,
+) -> Result<String, ServerFnError> {
+    use crate::server::templates_grpc::GetTemplateRequest;
+    let ctx = crate::server::APP_CTX.get_app_ctx(&env_id).await;
+
+    let mut response = ctx.templates_grpc.get_all(()).await.unwrap();
+
+    let mut result = Vec::new();
+    while let Some(next_item) = response.get_next_item().await {
+        let next_item = next_item.unwrap();
+
+        if request
+            .iter()
+            .any(|itm| itm.env == next_item.env && itm.name == next_item.name)
+        {
+            let yaml = ctx
+                .templates_grpc
+                .get(GetTemplateRequest {
+                    env: next_item.env.to_string(),
+                    name: next_item.name.to_string(),
+                })
+                .await
+                .unwrap();
+
+            result.push(ExportItem {
+                env: next_item.env,
+                name: next_item.name,
+                yaml: yaml.yaml.into_bytes().into_base64(),
+            });
+        }
+    }
+
+    Ok(serde_yaml::to_string(&result).unwrap())
 }
