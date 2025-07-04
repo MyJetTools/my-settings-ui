@@ -43,6 +43,7 @@ pub fn CopyToEnvDialog(from_env_id: Rc<String>, on_ok: EventHandler<String>) -> 
                     cs.write().selected_env = value;
                 },
                 value: cs_ra.selected_env.as_str(),
+                {options.into_iter()}
             }
             label { "Secret name" }
         }
