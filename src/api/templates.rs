@@ -1,5 +1,4 @@
 use dioxus::prelude::*;
-use rust_extensions::base64::IntoBase64;
 
 use crate::models::*;
 
@@ -102,11 +101,12 @@ pub async fn get_template_content(
 }
 
 #[server]
-pub async fn download_template(
+pub async fn download_snapshot(
     env_id: String,
     request: Vec<DownloadFileRequestModel>,
 ) -> Result<String, ServerFnError> {
     use crate::server::templates_grpc::GetTemplateRequest;
+    use rust_extensions::base64::IntoBase64;
     let ctx = crate::server::APP_CTX.get_app_ctx(&env_id).await;
 
     let mut response = ctx.templates_grpc.get_all(()).await.unwrap();
