@@ -252,7 +252,11 @@ pub fn TemplatesPage() -> Element {
 
     let export_btn = if cs_ra.has_selected() {
         rsx! {
-            button { class: "btn btn-sm btn-primary", "Export" }
+            button {
+                class: "btn btn-sm btn-primary",
+                onclick: move |_| { download_file() },
+                "Export"
+            }
         }
     } else {
         rsx! {}
@@ -262,7 +266,7 @@ pub fn TemplatesPage() -> Element {
         table { class: "table table-striped", style: "text-align: left;",
             thead {
                 tr {
-                    th {}
+                    th { {export_btn} }
                     th {}
                     th { "Env" }
                     th {}
@@ -288,10 +292,7 @@ pub fn TemplatesPage() -> Element {
                     th { "Created" }
                     th { "Updated" }
                     th { "Last request" }
-                    th {
-                        {add_btn}
-                        {export_btn}
-                    }
+                    th { {add_btn} }
                 }
             }
 
@@ -347,4 +348,24 @@ fn get_last_edited(templates: &Vec<Rc<TemplateHttpModel>>) -> (String, String) {
     }
 
     (env, name)
+}
+
+fn download_file() {
+    use rfd::FileDialog;
+    // File content
+    let content = "Hello, this is a sample file content!".to_string();
+
+    // Open a file save dialog
+    if let Some(path) = FileDialog::new()
+        .set_file_name("sample.txt")
+        .add_filter("Text", &["txt"])
+        .save_file()
+    {
+        // Write the content to the selected file
+        if let Err(e) = std::fs::write(&path, content) {
+            eprintln!("Failed to write file: {}", e);
+        } else {
+            println!("File saved to {:?}", path);
+        }
+    }
 }

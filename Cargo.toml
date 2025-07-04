@@ -49,6 +49,8 @@ dioxus-utils = { git = "https://github.com/MyJetTools/dioxus-utils.git", tag = "
 ] }
 
 
+rfd = "*"
+
 my-ssh = { tag = "0.1.2", git = "https://github.com/MyJetTools/my-ssh.git", optional = true }
 
 serde = "*"
