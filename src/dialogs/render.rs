@@ -60,5 +60,11 @@ pub fn RenderDialog() -> Element {
                 ShowPopulatedYaml { env_id, env, name }
             }
         }
+
+        DialogState::ShowTemplateToExport(yaml) => {
+            rsx! {
+                ShowTemplateToExport { yaml }
+            }
+        }
     }
 }

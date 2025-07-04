@@ -262,11 +262,14 @@ pub fn TemplatesPage() -> Element {
                     let selected_env_id = selected_env_id.clone();
                     spawn(async move {
                         let request = cs.read().get_request_data();
-                        let _ = crate::api::templates::download_snapshot(
+                        let yaml = crate::api::templates::download_snapshot(
                                 selected_env_id.to_string(),
                                 request,
                             )
-                            .await;
+                            .await
+                            .unwrap();
+                        consume_context::<Signal<DialogState>>()
+                            .set(DialogState::ShowTemplateToExport(Rc::new(yaml)));
                     });
                 },
                 "Export"
