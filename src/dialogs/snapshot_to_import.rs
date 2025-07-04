@@ -11,10 +11,10 @@ pub fn SnapshotToImport(on_ok: EventHandler<String>) -> Element {
     rsx! {
         DialogTemplate {
             header: "Snapshot to export",
-            allocate_max_space: true,
             content: rsx! {
                 textarea {
-                    class: "form-control modal-content-full-screen",
+                    style: "height: 500px",
+                    class: "form-control",
                     onchange: move |c| {
                         cs.write().value = c.value();
                     },
