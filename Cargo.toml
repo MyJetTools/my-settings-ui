@@ -33,7 +33,6 @@ my-logger = { tag = "1.2.1", git = "https://github.com/MyJetTools/my-logger.git"
 
 my-grpc-extensions = { tag = "0.6.5", git = "https://github.com/MyJetTools/my-grpc-extensions.git", features = [
     "grpc-client",
-    "with-unix-socket",
     "with-ssh",
 ], optional = true }
 
