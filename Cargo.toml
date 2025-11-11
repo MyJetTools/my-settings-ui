@@ -13,6 +13,7 @@ server = [
     "my-grpc-extensions",
     "tokio",
     "tonic",
+    "tonic-prost",
     "async-trait",
     "anyhow",
     "prost",
