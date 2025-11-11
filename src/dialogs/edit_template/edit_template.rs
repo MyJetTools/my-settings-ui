@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
-use dioxus_utils::DataState;
+use dioxus_utils::*;
 
 use crate::{dialogs::*, icons::*, models::*};
 
@@ -150,8 +150,8 @@ fn get_data(
     cs_read_access: &EditTemplateState,
     init_data: &LoadDataFromTemplate,
 ) -> Result<(), Element> {
-    match &init_data.init_status {
-        DataState::None => {
+    match init_data.init_status.as_ref() {
+        RenderState::None => {
             let env_id = cs_read_access.env_id.clone();
             let env = init_data.src_template.env.to_string();
             let name = init_data.src_template.name.to_string();
@@ -161,7 +161,8 @@ fn get_data(
                     .init_from_other_template
                     .as_mut()
                     .unwrap()
-                    .init_status = DataState::Loading;
+                    .init_status
+                    .set_loading();
                 match crate::api::templates::get_template_content(env_id.to_string(), env, name)
                     .await
                 {
@@ -190,13 +191,13 @@ fn get_data(
                 LoadingIcon {}
             });
         }
-        DataState::Loading => {
+        RenderState::Loading => {
             return Err(rsx! {
                 LoadingIcon {}
             });
         }
-        DataState::Loaded(_) => Ok(()),
-        DataState::Error(err) => {
+        RenderState::Loaded(_) => Ok(()),
+        RenderState::Error(err) => {
             return Err(rsx! {
                 div { {err.as_str()} }
             })

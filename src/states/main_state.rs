@@ -43,10 +43,10 @@ impl MainState {
             .get(ENV_LOCAL_STORAGE_KEY)
             .unwrap_or_default();
         Self {
-            envs: DataState::None,
+            envs: DataState::default(),
             location,
-            templates: DataState::None,
-            secrets: DataState::None,
+            templates: DataState::default(),
+            secrets: DataState::default(),
             current_env_id: Rc::new(current_env_id),
             user: "".to_string(),
             prompt_ssh_key: None,
@@ -62,7 +62,7 @@ impl MainState {
                 .set(ENV_LOCAL_STORAGE_KEY, &self.current_env_id);
         }
 
-        self.envs = DataState::Loaded(envs);
+        self.envs.set_loaded(envs);
     }
 
     pub fn get_selected_env(&self) -> Rc<String> {
@@ -81,7 +81,7 @@ impl MainState {
     }
 
     pub fn drop_data(&mut self) {
-        self.templates = DataState::None;
-        self.secrets = DataState::None;
+        self.templates.reset();
+        self.secrets.reset();
     }
 }

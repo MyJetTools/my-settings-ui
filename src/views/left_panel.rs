@@ -1,7 +1,6 @@
 use super::*;
 use crate::{states::*, AppRoute};
 use dioxus::prelude::*;
-use dioxus_router::prelude::Link;
 
 const ACTIVE_CLASS: &str = "menu-active";
 

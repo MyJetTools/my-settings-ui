@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
-use dioxus_utils::DataState;
+use dioxus_utils::{DataState, RenderState};
 use serde::*;
 
 use crate::{dialogs::*, icons::*};
@@ -14,16 +14,16 @@ pub fn ShowSecretUsageBySecret(env_id: Rc<String>, secret: Rc<String>) -> Elemen
     let component_state_read_state = component_state.read();
 
     let values = match component_state_read_state.data.as_ref() {
-        DataState::None => {
+        RenderState::None => {
             let env_id = env_id.clone();
             let secret_id = secret.to_string();
             spawn(async move {
                 match load_secret_usage_by_secret(env_id.to_string(), secret_id).await {
                     Ok(result) => {
-                        component_state.write().data = DataState::Loaded(result);
+                        component_state.write().data.set_loaded(result);
                     }
                     Err(err) => {
-                        component_state.write().data = DataState::Error(err.to_string());
+                        component_state.write().data.set_error(err.to_string());
                     }
                 }
             });
@@ -31,13 +31,13 @@ pub fn ShowSecretUsageBySecret(env_id: Rc<String>, secret: Rc<String>) -> Elemen
                 div {}
             };
         }
-        DataState::Loading => {
+        RenderState::Loading => {
             return rsx! {
                 LoadingIcon {}
             }
         }
-        DataState::Loaded(data) => data,
-        DataState::Error(err) => {
+        RenderState::Loaded(data) => data,
+        RenderState::Error(err) => {
             return rsx! {
                 div { {err.as_str()} }
             }
@@ -98,7 +98,7 @@ pub struct ShowSecretUsageBySecretState {
 impl ShowSecretUsageBySecretState {
     pub fn new() -> Self {
         Self {
-            data: DataState::None,
+            data: DataState::new(),
         }
     }
 }

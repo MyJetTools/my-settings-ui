@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use dioxus::prelude::*;
-use dioxus_utils::DataState;
+use dioxus_utils::{DataState, RenderState};
 use serde::*;
 
 use crate::{dialogs::*, icons::*};
@@ -13,28 +13,28 @@ pub fn ShowPopulatedYaml(env_id: Rc<String>, env: Rc<String>, name: Rc<String>) 
     let component_state_read_access = component_state.read();
 
     let content = match component_state_read_access.yaml.as_ref() {
-        DataState::None => {
+        RenderState::None => {
             let env_id = env_id.clone();
             let env = env.to_string();
             let name = name.to_string();
             spawn(async move {
                 match load_yaml(env_id.to_string(), env, name).await {
                     Ok(result) => {
-                        component_state.write().yaml = DataState::Loaded(result.yaml);
+                        component_state.write().yaml.set_loaded(result.yaml);
                     }
                     Err(err) => {
-                        component_state.write().yaml = DataState::Error(err.to_string());
+                        component_state.write().yaml.set_error(err.to_string());
                     }
                 }
             });
             rsx! {}
         }
-        DataState::Loading => {
+        RenderState::Loading => {
             rsx! {
                 LoadingIcon {}
             }
         }
-        DataState::Loaded(yaml) => {
+        RenderState::Loaded(yaml) => {
             rsx! {
                 textarea {
                     class: "form-control modal-content-full-screen",
@@ -43,7 +43,7 @@ pub fn ShowPopulatedYaml(env_id: Rc<String>, env: Rc<String>, name: Rc<String>) 
                 }
             }
         }
-        DataState::Error(err) => rsx! {
+        RenderState::Error(err) => rsx! {
             div { {err.as_str()} }
         },
     };
@@ -60,7 +60,7 @@ pub struct ShowPopulatedYamlState {
 impl ShowPopulatedYamlState {
     pub fn new() -> Self {
         Self {
-            yaml: DataState::None,
+            yaml: DataState::new(),
         }
     }
 }

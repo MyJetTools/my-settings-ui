@@ -24,9 +24,9 @@ jobs:
 
       - run: |
           export GIT_HUB_TOKEN=${{ secrets.PUBLISH_TOKEN }}
-          dx build --platform web --release
-          ls ./target/dx/my-settings-ui/release/web
-          python3 build.py ./target/dx/my-settings-ui/release/web/public/index.html
+          dx bundle --web --release
+          ls ./target/dx/${APP_NAME}/release/web
+          python3 build.py ./target/dx/${APP_NAME}/release/web/public/index.html
 
       - name: Zip and upload
         run: |

@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
-use dioxus_utils::DataState;
+use dioxus_utils::*;
 use serde::*;
 
 use crate::icons::*;
@@ -19,10 +19,10 @@ pub fn EditSecret(
     let component_state_read_access = component_state.read();
 
     match component_state_read_access.value_on_init.as_ref() {
-        DataState::None => {
+        RenderState::None => {
             let env_id = env_id.clone();
             spawn(async move {
-                component_state.write().value_on_init = DataState::Loading;
+                component_state.write().value_on_init.set_loading();
                 match load_secret(env_id.to_string(), name).await {
                     Ok(value) => {
                         component_state.write().init_value(SecretValue {
@@ -31,7 +31,10 @@ pub fn EditSecret(
                         });
                     }
                     Err(err) => {
-                        component_state.write().value_on_init = DataState::Error(err.to_string());
+                        component_state
+                            .write()
+                            .value_on_init
+                            .set_error(err.to_string());
                     }
                 };
             });
@@ -40,15 +43,15 @@ pub fn EditSecret(
                 LoadingIcon {}
             };
         }
-        DataState::Loading => {
+        RenderState::Loading => {
             return rsx! {
                 LoadingIcon {}
             }
         }
 
-        DataState::Loaded(_) => {}
+        RenderState::Loaded(_) => {}
 
-        DataState::Error(err) => {
+        RenderState::Error(err) => {
             return rsx! {
                 div { {err.as_str()} }
             }
@@ -168,21 +171,23 @@ impl EditSecretState {
 
         let value = SecretValue::default();
 
+        let value_on_init = if new_secret {
+            DataState::new_as_loaded(value.clone())
+        } else {
+            DataState::new()
+        };
+
         return Self {
             new_secret,
             name,
-            value_on_init: if new_secret {
-                DataState::Loaded(value.clone())
-            } else {
-                DataState::None
-            },
+            value_on_init,
             value,
         };
     }
 
     pub fn init_value(&mut self, value: SecretValue) {
         self.value = value.clone();
-        self.value_on_init = DataState::Loaded(value);
+        self.value_on_init.set_loaded(value);
     }
 
     pub fn can_be_saved(&self) -> bool {
@@ -195,7 +200,7 @@ impl EditSecretState {
         }
 
         let value_on_init = match self.value_on_init.as_ref() {
-            DataState::Loaded(value) => value,
+            RenderState::Loaded(value) => value,
             _ => {
                 return false;
             }

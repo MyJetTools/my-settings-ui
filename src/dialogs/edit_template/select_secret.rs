@@ -1,28 +1,30 @@
 use std::rc::Rc;
 
 use dioxus::prelude::*;
-use dioxus_utils::DataState;
+use dioxus_utils::*;
 
 use crate::{icons::*, models::*};
 
 #[component]
 pub fn SelectSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> Element {
-    let mut component_state = use_signal(|| SelectSecretState::new());
+    let mut component_state = use_signal(|| SelectSecretState::default());
 
     let component_state_read_access = component_state.read();
 
     let secrets = match component_state_read_access.secrets.as_ref() {
-        DataState::None => {
+        RenderState::None => {
             let env_id = env_id.clone();
             spawn(async move {
-                component_state.write().secrets = DataState::Loading;
+                component_state.write().secrets.set_loading();
                 match crate::api::secrets::load_secrets(env_id.to_string()).await {
                     Ok(data) => {
-                        component_state.write().secrets =
-                            DataState::Loaded(data.into_iter().map(Rc::new).collect());
+                        component_state
+                            .write()
+                            .secrets
+                            .set_loaded(data.into_iter().map(Rc::new).collect());
                     }
                     Err(err) => {
-                        component_state.write().secrets = DataState::Error(err.to_string());
+                        component_state.write().secrets.set_error(err.to_string());
                     }
                 }
             });
@@ -30,13 +32,13 @@ pub fn SelectSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                 LoadingIcon {}
             };
         }
-        DataState::Loading => {
+        RenderState::Loading => {
             return rsx! {
                 LoadingIcon {}
             }
         }
-        DataState::Loaded(items) => items,
-        DataState::Error(err) => {
+        RenderState::Loaded(items) => items,
+        RenderState::Error(err) => {
             return rsx! {
                 div { {err.as_str()} }
             };
@@ -75,19 +77,13 @@ pub fn SelectSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
     }
 }
 
+#[derive(Default)]
 pub struct SelectSecretState {
     secrets: DataState<Vec<Rc<SecretHttpModel>>>,
     filter: String,
 }
 
 impl SelectSecretState {
-    pub fn new() -> Self {
-        Self {
-            secrets: DataState::None,
-            filter: String::new(),
-        }
-    }
-
     pub fn filter_it(&self, item: &SecretHttpModel) -> bool {
         if self.filter.len() < 3 {
             return false;

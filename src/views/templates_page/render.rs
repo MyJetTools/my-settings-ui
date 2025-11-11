@@ -7,7 +7,7 @@ use crate::{states::*, ui_utils::ToastType};
 use dioxus::prelude::*;
 
 use crate::dialogs::*;
-use dioxus_utils::DataState;
+use dioxus_utils::*;
 
 use super::state::*;
 
@@ -27,11 +27,11 @@ pub fn TemplatesPage() -> Element {
     let mut filter_template = consume_context::<Signal<FilterTemplate>>();
     let filter_template_read_access = filter_template.read();
 
-    let templates = match &main_state_read_access.templates {
-        dioxus_utils::DataState::None => {
+    let templates = match main_state_read_access.templates.as_ref() {
+        RenderState::None => {
             let env_id_request = selected_env.clone();
             spawn(async move {
-                main_state.write().templates = dioxus_utils::DataState::Loading;
+                main_state.write().templates.set_loading();
                 match crate::api::templates::get_templates(env_id_request.to_string()).await {
                     Ok(templates) => {
                         main_state
@@ -40,8 +40,7 @@ pub fn TemplatesPage() -> Element {
                             .set_loaded(templates.into_iter().map(Rc::new).collect());
                     }
                     Err(err) => {
-                        main_state.write().templates =
-                            dioxus_utils::DataState::Error(err.to_string());
+                        main_state.write().templates.set_error(err.to_string());
                     }
                 }
             });
@@ -50,13 +49,13 @@ pub fn TemplatesPage() -> Element {
                 LoadingIcon {}
             };
         }
-        DataState::Loading => {
+        RenderState::Loading => {
             return rsx! {
                 LoadingIcon {}
             }
         }
-        DataState::Loaded(result) => result,
-        DataState::Error(err) => {
+        RenderState::Loaded(result) => result,
+        RenderState::Error(err) => {
             return rsx! {
                 {err.as_str()}
             }

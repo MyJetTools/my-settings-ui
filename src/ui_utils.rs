@@ -26,5 +26,5 @@ pub fn show_toast<'s>(message: impl Into<StrOrString<'s>>, toast_type: ToastType
         message.as_str()
     );
 
-    let _ = dioxus_utils::js::eval(js.as_str());
+    let _ = dioxus_utils::eval(js.as_str());
 }

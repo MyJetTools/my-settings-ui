@@ -1,0 +1,11 @@
+## Dioxus 0.7 Upgrade Notes
+
+- Bump framework crates in `Cargo.toml`: upgrade `dioxus` to `0.7` with `["fullstack","router"]`, and sync `dioxus-utils` to tag `0.7.0` so the new helper APIs are available (*done*).
+- Adopt the new launch API in `src/main.rs`: use `dioxus::LaunchBuilder` with `Router::<AppRoute>` and gate server-only config via `server_only!(ServeConfig::builder()...)`.
+- Gate server imports explicitly: add `#[cfg(feature = "server")] use dioxus::server::*;` to avoid pulling server primitives into web builds.
+- Replace legacy `DataState` variant juggling with the new `RenderState` helpers from `dioxus_utils::*`: initialize with `DataState::default()`/`DataState::new()`, and switch manual enum assignments to `.set_loading()`, `.set_loaded(...)`, `.set_value(...)`, `.set_error(...)`, and `.reset()`.
+- Convert component state builders to `Default`: implement or derive `Default` where needed (e.g., `SelectSecretState`) and update `use_signal` calls to `use_signal(|| State::default())`.
+- Update JavaScript evaluation helpers: call `dioxus_utils::eval(...)` instead of the removed `dioxus_utils::js::eval(...)`.
+- Surface gRPC model conversions as `From` impls (see `src/api/secrets.rs` and `src/api/templates.rs`) so server functions can return the target HTTP models without manual field mapping.
+- Re-test asynchronous loaders that relied on `DataState::Loaded` pattern; ensure every `RenderState::None` branch now flips to loading and eventually writes a value or error before rendering.
+- Validation checklist: run `cargo fmt`, `cargo clippy --all-features`, and `cargo check --all-features` to confirm the migration compiles cleanly on both server and web targets.

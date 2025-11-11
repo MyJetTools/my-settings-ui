@@ -1,5 +1,4 @@
 use dioxus::prelude::*;
-use dioxus_utils::DataState;
 
 use crate::states::*;
 
@@ -11,15 +10,15 @@ pub fn EnvsSelector() -> Element {
 
     let main_state_read_access = main_state.read();
 
-    let envs_options = if let DataState::Loaded(envs) = main_state_read_access.envs.as_ref() {
+    let envs_options = if let Some(envs) = main_state_read_access.envs.try_unwrap_as_loaded() {
         envs.clone().into_iter().map(|env| {
             if selected_env.as_str() == env.as_str() {
                 rsx! {
-                    option { selected: true, {env.as_str() } }
+                    option { selected: true, {env.as_str()} }
                 }
             } else {
                 rsx! {
-                    option { {env.as_str() } }
+                    option { {env.as_str()} }
                 }
             }
         })

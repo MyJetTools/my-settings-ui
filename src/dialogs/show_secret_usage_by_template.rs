@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
-use dioxus_utils::DataState;
+use dioxus_utils::{console_log, DataState, RenderState};
 use serde::*;
 
 use crate::icons::*;
@@ -11,22 +11,22 @@ use super::*;
 
 #[component]
 pub fn ShowSecretUsageByTemplate(env_id: Rc<String>, secret: Rc<String>) -> Element {
-    dioxus_utils::js::console_log(format!("Secret Usage: {}", secret).as_str());
+    console_log(format!("Secret Usage: {}", secret).as_str());
 
     let mut component_state = use_signal(|| ShowSecretUsageByTemplateState::new());
 
     let component_state_read_access = component_state.read();
 
     let data = match component_state_read_access.data.as_ref() {
-        DataState::None => {
+        RenderState::None => {
             let secret_id = secret.to_string();
             spawn(async move {
                 match load_secret_usage(env_id.to_string(), secret_id).await {
                     Ok(result) => {
-                        component_state.write().data = DataState::Loaded(result);
+                        component_state.write().data.set_loaded(result);
                     }
                     Err(err) => {
-                        component_state.write().data = DataState::Error(err.to_string());
+                        component_state.write().data.set_error(err.to_string());
                     }
                 }
             });
@@ -34,13 +34,13 @@ pub fn ShowSecretUsageByTemplate(env_id: Rc<String>, secret: Rc<String>) -> Elem
                 div {}
             };
         }
-        DataState::Loading => {
+        RenderState::Loading => {
             return rsx! {
                 LoadingIcon {}
             }
         }
-        DataState::Loaded(data) => data,
-        DataState::Error(err) => {
+        RenderState::Loaded(data) => data,
+        RenderState::Error(err) => {
             return rsx! {
                 div { {err.as_str()} }
             }

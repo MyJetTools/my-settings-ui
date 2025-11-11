@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use dioxus::prelude::*;
-use dioxus_utils::DataState;
+use dioxus_utils::{DataState, RenderState};
 use serde::*;
 
 use crate::dialogs::*;
@@ -14,17 +14,17 @@ pub fn ShowSecret(env_id: Rc<String>, secret: Rc<String>) -> Element {
     let component_state_read_access = component_state.read();
 
     let content = match component_state_read_access.value.as_ref() {
-        DataState::None => {
+        RenderState::None => {
             let env_id = env_id.clone();
             let secret_name = secret.clone();
             spawn(async move {
-                component_state.write().value = DataState::Loading;
+                component_state.write().value.set_loading();
                 match load_secret_value(env_id.to_string(), secret_name.to_string()).await {
                     Ok(value) => {
-                        component_state.write().value = DataState::Loaded(value.value);
+                        component_state.write().value.set_loaded(value.value);
                     }
                     Err(err) => {
-                        component_state.write().value = DataState::Error(err.to_string());
+                        component_state.write().value.set_error(err.to_string());
                     }
                 }
             });
@@ -32,12 +32,12 @@ pub fn ShowSecret(env_id: Rc<String>, secret: Rc<String>) -> Element {
                 div {}
             }
         }
-        DataState::Loading => {
+        RenderState::Loading => {
             rsx! {
                 LoadingIcon {}
             }
         }
-        DataState::Loaded(value) => rsx! {
+        RenderState::Loaded(value) => rsx! {
             div { class: "form-floating mb-3",
                 input {
                     class: "form-control",
@@ -47,7 +47,7 @@ pub fn ShowSecret(env_id: Rc<String>, secret: Rc<String>) -> Element {
                 label { "Secret value" }
             }
         },
-        DataState::Error(err) => {
+        RenderState::Error(err) => {
             rsx! {
                 div { {err.as_str()} }
             }
@@ -71,7 +71,7 @@ pub struct ShowSecretState {
 impl ShowSecretState {
     pub fn new() -> Self {
         Self {
-            value: DataState::None,
+            value: DataState::new(),
         }
     }
 }

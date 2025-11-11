@@ -13,11 +13,13 @@ mod storage;
 mod ui_utils;
 mod utils;
 mod views;
-use dioxus_utils::DataState;
+use dioxus_utils::*;
 use serde::*;
 
 #[cfg(feature = "server")]
 mod server;
+#[cfg(feature = "server")]
+use dioxus::server::*;
 
 use crate::{icons::*, states::*};
 
@@ -82,14 +84,16 @@ fn MyLayout() -> Element {
     let main_state_read_access = main_state.read();
 
     match main_state_read_access.envs.as_ref() {
-        DataState::None => {
+        RenderState::None => {
             spawn(async move {
                 match get_envs().await {
                     Ok(resp) => {
                         let mut write_access = main_state.write();
 
                         if resp.envs.is_empty() {
-                            write_access.envs = DataState::Error("Unauthorized access".to_string());
+                            write_access
+                                .envs
+                                .set_error("Unauthorized access".to_string());
                             return;
                         }
 
@@ -99,7 +103,7 @@ fn MyLayout() -> Element {
                         write_access.prompt_ssh_key = Some(resp.prompt_ssh_pass_key);
                     }
                     Err(err) => {
-                        main_state.write().envs = DataState::Error(err.to_string());
+                        main_state.write().envs.set_error(err.to_string());
                     }
                 }
             });
@@ -108,7 +112,7 @@ fn MyLayout() -> Element {
             };
         }
 
-        DataState::Loading => {
+        RenderState::Loading => {
             return {
                 rsx! {
                     div { "Loading envs..." }
@@ -116,9 +120,9 @@ fn MyLayout() -> Element {
                 }
             };
         }
-        DataState::Loaded(_) => {}
+        RenderState::Loaded(_) => {}
 
-        DataState::Error(err) => {
+        RenderState::Error(err) => {
             return {
                 rsx! {
                     div { {err.as_str()} }
@@ -167,14 +171,10 @@ pub struct EnvsHttpResponse {
     prompt_ssh_pass_key: bool,
 }
 
-#[server]
+#[get("/api/envs", headers: dioxus::fullstack::HeaderMap)]
 pub async fn get_envs() -> Result<EnvsHttpResponse, ServerFnError> {
-    let server_context = server_context();
-
     let user_id = {
-        let req = server_context.request_parts();
-
-        if let Some(user) = req.headers.get("x-ssl-user") {
+        if let Some(user) = headers.get("x-ssl-user") {
             user.to_str().unwrap().to_string()
         } else {
             "".to_string()

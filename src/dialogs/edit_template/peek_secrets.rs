@@ -2,7 +2,7 @@ use std::{collections::HashMap, rc::Rc};
 
 use dioxus::prelude::*;
 
-use dioxus_utils::DataState;
+use dioxus_utils::*;
 
 use crate::{icons::*, models::*};
 
@@ -13,10 +13,10 @@ pub fn PeekSecrets(env_id: Rc<String>, yaml: String) -> Element {
     let component_state_read_model = component_state.read();
 
     let loaded_secrets = match component_state_read_model.loaded_secrets.as_ref() {
-        DataState::None => {
+        RenderState::None => {
             spawn(async move {
                 let env_id = env_id.clone();
-                component_state.write().loaded_secrets = DataState::Loading;
+                component_state.write().loaded_secrets.set_loading();
                 match crate::api::secrets::load_secrets(env_id.to_string()).await {
                     Ok(as_vec) => {
                         let mut values = HashMap::new();
@@ -25,10 +25,13 @@ pub fn PeekSecrets(env_id: Rc<String>, yaml: String) -> Element {
                             values.insert(itm.name.clone(), itm);
                         }
 
-                        component_state.write().loaded_secrets = DataState::Loaded(values);
+                        component_state.write().loaded_secrets.set_loaded(values);
                     }
                     Err(err) => {
-                        component_state.write().loaded_secrets = DataState::Error(err.to_string());
+                        component_state
+                            .write()
+                            .loaded_secrets
+                            .set_error(err.to_string());
                     }
                 }
             });
@@ -36,15 +39,15 @@ pub fn PeekSecrets(env_id: Rc<String>, yaml: String) -> Element {
                 LoadingIcon {}
             };
         }
-        DataState::Loading => {
+        RenderState::Loading => {
             return rsx! {
                 LoadingIcon {}
             };
         }
 
-        DataState::Loaded(data) => data,
+        RenderState::Loaded(data) => data,
 
-        DataState::Error(err) => {
+        RenderState::Error(err) => {
             return rsx! {
                 div { {err.as_str()} }
             };

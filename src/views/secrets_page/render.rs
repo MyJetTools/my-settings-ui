@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, rc::Rc};
 
 use dioxus::prelude::*;
 
-use dioxus_utils::DataState;
+use dioxus_utils::*;
 
 use crate::{dialogs::*, icons::*, models::*, states::*, ui_utils::ToastType};
 
@@ -28,18 +28,17 @@ pub fn SecretsPage() -> Element {
 
     let filter_secret_read_access = filter_secret.read();
 
-    let secrets = match &main_state_read_access.secrets {
-        DataState::None => {
+    let secrets = match main_state_read_access.secrets.as_ref() {
+        RenderState::None => {
             let env_id = selected_env_id.clone();
             spawn(async move {
-                main_state.write().secrets = dioxus_utils::DataState::Loading;
+                main_state.write().secrets.set_loading();
                 match crate::api::secrets::load_secrets(env_id.to_string()).await {
                     Ok(value) => {
-                        main_state.write().secrets = dioxus_utils::DataState::Loaded(value);
+                        main_state.write().secrets.set_value(value);
                     }
                     Err(err) => {
-                        main_state.write().secrets =
-                            dioxus_utils::DataState::Error(err.to_string());
+                        main_state.write().secrets.set_error(err.to_string());
                     }
                 }
             });
@@ -47,13 +46,13 @@ pub fn SecretsPage() -> Element {
                 LoadingIcon {}
             };
         }
-        DataState::Loading => {
+        RenderState::Loading => {
             return rsx! {
                 LoadingIcon {}
             }
         }
-        DataState::Loaded(value) => value,
-        DataState::Error(err) => {
+        RenderState::Loaded(value) => value,
+        RenderState::Error(err) => {
             return rsx! {
                 div { {err.as_str()} }
             }

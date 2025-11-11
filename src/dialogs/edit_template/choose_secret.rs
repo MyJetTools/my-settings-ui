@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use dioxus::prelude::*;
-use dioxus_utils::DataState;
+use dioxus_utils::*;
 
 use crate::{icons::*, models::*};
 
@@ -17,17 +17,19 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
     let content = match component_state_read_access.mode {
         ChooseSecretMode::Select => {
             let secrets = match component_state_read_access.secrets.as_ref() {
-                DataState::None => {
+                RenderState::None => {
                     let env_id = env_id.clone();
                     spawn(async move {
-                        component_state.write().secrets = DataState::Loading;
+                        component_state.write().secrets.set_loading();
                         match crate::api::secrets::load_secrets(env_id.to_string()).await {
                             Ok(secrets) => {
-                                component_state.write().secrets =
-                                    DataState::Loaded(secrets.into_iter().map(Rc::new).collect());
+                                component_state
+                                    .write()
+                                    .secrets
+                                    .set_loaded(secrets.into_iter().map(Rc::new).collect());
                             }
                             Err(err) => {
-                                component_state.write().secrets = DataState::Error(err.to_string());
+                                component_state.write().secrets.set_error(err.to_string());
                             }
                         }
                     });
@@ -36,13 +38,13 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                         LoadingIcon {}
                     };
                 }
-                DataState::Loading => {
+                RenderState::Loading => {
                     return rsx! {
                         LoadingIcon {}
                     }
                 }
-                DataState::Loaded(secrets) => secrets,
-                DataState::Error(err) => {
+                RenderState::Loaded(secrets) => secrets,
+                RenderState::Error(err) => {
                     return rsx! {
                         div { {err.as_str()} }
                     }

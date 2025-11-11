@@ -32,7 +32,7 @@ web = ["dioxus/web"]
 rust-extensions = { tag = "0.1.5", git = "https://github.com/MyJetTools/rust-extensions.git" }
 my-logger = { tag = "1.2.1", git = "https://github.com/MyJetTools/my-logger.git", optional = true }
 
-my-grpc-extensions = { tag = "0.6.5", git = "https://github.com/MyJetTools/my-grpc-extensions.git", features = [
+my-grpc-extensions = { tag = "0.6.6", git = "https://github.com/MyJetTools/my-grpc-extensions.git", features = [
     "grpc-client",
     "with-ssh",
 ], optional = true }
@@ -40,11 +40,11 @@ my-grpc-extensions = { tag = "0.6.5", git = "https://github.com/MyJetTools/my-gr
 
 my-settings-reader = { tag = "0.4.1", git = "https://github.com/MyJetTools/my-settings-reader.git", optional = true }
 
-settings-utils = { tag = "0.1.1", git = "https://github.com/MyJetTools/settings-utils.git" }
+settings-utils = { tag = "0.1.2", git = "https://github.com/MyJetTools/settings-utils.git" }
 
-dioxus = { version = "0.6", features = ["fullstack", "router"] }
+dioxus = { version = "0.7", features = ["fullstack", "router"] }
 
-dioxus-utils = { git = "https://github.com/MyJetTools/dioxus-utils.git", tag = "0.6.0", features = [
+dioxus-utils = { git = "https://github.com/MyJetTools/dioxus-utils.git", tag = "0.7.0", features = [
     "fullstack",
 
 ] }
@@ -61,17 +61,18 @@ tokio = { version = "*", features = ["full"], optional = true }
 serde_json = { version = "*" }
 serde_yaml = { version = "*", optional = true }
 futures = { version = "*", optional = true }
-tonic = { version = "*", features = ["prost"], optional = true }
+tonic = { version = "*", optional = true }
+tonic-prost = { version = "*", optional = true }
 anyhow = { version = "*", optional = true }
-prost = { version = "0.13", optional = true }
-prost-types = { version = "0.13", optional = true }
+prost = { version = "*", optional = true }
+prost-types = { version = "*", optional = true }
 async-trait = { version = "*", optional = true }
 lazy_static = { version = "*", optional = true }
 flurl = { tag = "0.6.1", git = "https://github.com/MyJetTools/fl-url.git", optional = true }
 base64 = { version = "*" }
 
 [build-dependencies]
-ci-utils = { git = "https://github.com/MyJetTools/ci-utils.git", tag = "0.1.2" }
+ci-utils = { git = "https://github.com/MyJetTools/ci-utils.git", tag = "0.1.3" }
 
 [profile]
 

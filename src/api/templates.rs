@@ -2,51 +2,27 @@ use dioxus::prelude::*;
 
 use crate::models::*;
 
-#[server]
+#[get("/api/templates/load?env_id")]
 pub async fn get_templates(env_id: String) -> Result<Vec<TemplateHttpModel>, ServerFnError> {
-    use rust_extensions::date_time::DateTimeAsMicroseconds;
     use std::collections::BTreeMap;
 
     let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
 
-    let response = ctx
+    let response: BTreeMap<String, TemplateHttpModel> = ctx
         .templates_grpc
         .get_all(())
         .await
         .unwrap()
-        .into_vec()
+        .into_b_tree_map(|itm| (format!("{}/{}", itm.name, itm.env), itm.into()))
         .await
         .unwrap();
 
-    let result: BTreeMap<_, _> = response
-        .into_iter()
-        .map(|itm| {
-            (
-                format!("{}/{}", itm.name, itm.env),
-                TemplateHttpModel {
-                    env: itm.env,
-                    name: itm.name,
-                    created: match DateTimeAsMicroseconds::from_str(itm.created.as_str()) {
-                        Some(itm) => itm.unix_microseconds,
-                        None => 0,
-                    },
-                    updated: match DateTimeAsMicroseconds::from_str(itm.updated.as_str()) {
-                        Some(itm) => itm.unix_microseconds,
-                        None => 0,
-                    },
-                    last_requests: itm.last_requests,
-                    has_missing_placeholders: itm.has_missing_placeholders,
-                },
-            )
-        })
-        .collect();
-
-    let result = result.into_iter().map(|itm| itm.1).collect();
+    let result = response.into_iter().map(|itm| itm.1).collect();
 
     Ok(result)
 }
 
-#[server]
+#[post("/api/templates/save")]
 pub async fn save_template(
     env_id: String,
     data: UpdateTemplateHttpModel,
@@ -66,7 +42,7 @@ pub async fn save_template(
     Ok(())
 }
 
-#[server]
+#[post("/api/templates/delete")]
 pub async fn delete_template(
     env_id: String,
     env: String,
@@ -83,7 +59,7 @@ pub async fn delete_template(
     Ok(())
 }
 
-#[server]
+#[get("/api/templates/get_content?env_id&env&name")]
 pub async fn get_template_content(
     env_id: String,
     env: String,
@@ -100,7 +76,7 @@ pub async fn get_template_content(
     Ok(response.yaml)
 }
 
-#[server]
+#[post("/api/templates/download_snapshot")]
 pub async fn download_snapshot(
     env_id: String,
     request: Vec<DownloadFileRequestModel>,
@@ -139,7 +115,7 @@ pub async fn download_snapshot(
     Ok(serde_yaml::to_string(&result).unwrap())
 }
 
-#[server]
+#[post("/api/templates/upload_snapshot")]
 pub async fn upload_snapshot(env_id: String, snapshot: String) -> Result<(), ServerFnError> {
     use crate::server::templates_grpc::*;
     use rust_extensions::base64::*;
@@ -167,7 +143,7 @@ pub async fn upload_snapshot(env_id: String, snapshot: String) -> Result<(), Ser
     Ok(())
 }
 
-#[server]
+#[post("/api/templates/copy_to_other_env")]
 pub async fn copy_template_to_other_env(
     from_env_id: String,
     to_env_id: String,
@@ -201,4 +177,28 @@ pub async fn copy_template_to_other_env(
         .unwrap();
 
     Ok(())
+}
+
+#[cfg(feature = "server")]
+impl From<crate::server::templates_grpc::TemplateListItem> for TemplateHttpModel {
+    fn from(item: crate::server::templates_grpc::TemplateListItem) -> Self {
+        Self {
+            env: item.env,
+            name: item.name,
+            created: match rust_extensions::date_time::DateTimeAsMicroseconds::from_str(
+                item.created.as_str(),
+            ) {
+                Some(itm) => itm.unix_microseconds,
+                None => 0,
+            },
+            updated: match rust_extensions::date_time::DateTimeAsMicroseconds::from_str(
+                item.updated.as_str(),
+            ) {
+                Some(itm) => itm.unix_microseconds,
+                None => 0,
+            },
+            last_requests: item.last_requests,
+            has_missing_placeholders: item.has_missing_placeholders,
+        }
+    }
 }
