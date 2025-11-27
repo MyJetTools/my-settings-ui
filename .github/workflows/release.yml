@@ -4,7 +4,9 @@ on:
     tags: ["*"]
 
 env:
-  IMAGE_NAME: myjettools/my-settings-ui
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  APP_NAME: ${{ github.repository }}
+  DELIVER_NAME: ${{ github.repository }}
 
 jobs:
   build:
@@ -30,9 +32,11 @@ jobs:
 
       - name: Zip and upload
         run: |
+          FILE_NAME="https://jetdev.eu/file/$DELIVER_NAME-build.zip"
+          echo $FILE_NAME
           apt install zip 
-          zip -r data.zip ./target/dx/my-settings-ui/release/web ./Dockerfile
-          curl -X 'POST' 'https://jetdev.eu/file/my-settings-ui-build.zip' -H 'accept: */*' -H 'Content-Type: multipart/form-data' -F 'file=@data.zip;type=application/zip'
+          zip -r data.zip ./target/dx/${APP_NAME}/release/web ./Dockerfile
+          curl -X 'POST' $FILE_NAME -H 'accept: */*' -H 'Content-Type: multipart/form-data' -F 'file=@data.zip;type=application/zip'
 
 
   publish:
@@ -43,7 +47,9 @@ jobs:
 
       - name: Download Build Artifacts
         run: |
-          curl -L -o data.zip https://jetdev.eu/file/my-settings-ui-build.zip
+          FILE_NAME="https://jetdev.eu/file/$DELIVER_NAME-build.zip"
+          echo $FILE_NAME
+          curl -L -o data.zip $FILE_NAME
           unzip -o data.zip
 #        uses: actions/download-artifact@v3
 #        with:
@@ -54,14 +60,9 @@ jobs:
         run: echo ::set-output name=VERSION::$(echo ${GITHUB_REF_NAME})          
 
       - name: Docker login
-        env:
-          DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
-          DOCKER_PASS: ${{ secrets.DOCKER_PASSWORD }}
         run: |          
-          echo "$DOCKER_PASS" | docker login --username "$DOCKER_USER" --password-stdin   
+          echo "${{ secrets.PUBLISH_TOKEN }}" | docker login https://ghcr.io -u "${{ github.actor }}" --password-stdin   
       - name: Docker Build and Publish
-        run: |
-          ver=${GITHUB_REF_NAME}
-          echo $ver                  
-          docker build -t ${IMAGE_NAME}:$ver .
-          docker push ${IMAGE_NAME}:$ver
+        run: |          
+          docker build -t ${IMAGE_NAME}:${{ steps.get_version.outputs.VERSION }} .
+          docker push ${IMAGE_NAME}:${{ steps.get_version.outputs.VERSION }}
