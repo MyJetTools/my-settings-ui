@@ -2,54 +2,66 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 use dioxus_utils::{DataState, RenderState};
-use serde::*;
 
-use crate::{dialogs::*, icons::*};
+use crate::dialogs::*;
 
 #[component]
-pub fn ShowPopulatedYaml(env_id: Rc<String>, env: Rc<String>, name: Rc<String>) -> Element {
-    let mut component_state = use_signal(|| ShowPopulatedYamlState::new());
+pub fn ShowPopulatedYaml(
+    env_id: Rc<String>,
+    product_id: Rc<String>,
+    template_id: Rc<String>,
+) -> Element {
+    let cs = use_signal(|| ShowPopulatedYamlState::new());
 
-    let component_state_read_access = component_state.read();
+    let cs_ra = cs.read();
 
-    let content = match component_state_read_access.yaml.as_ref() {
-        RenderState::None => {
-            let env_id = env_id.clone();
-            let env = env.to_string();
-            let name = name.to_string();
-            spawn(async move {
-                match load_yaml(env_id.to_string(), env, name).await {
-                    Ok(result) => {
-                        component_state.write().yaml.set_loaded(result.yaml);
-                    }
-                    Err(err) => {
-                        component_state.write().yaml.set_error(err.to_string());
-                    }
-                }
-            });
-            rsx! {}
-        }
-        RenderState::Loading => {
-            rsx! {
-                LoadingIcon {}
-            }
-        }
-        RenderState::Loaded(yaml) => {
-            rsx! {
-                textarea {
-                    class: "form-control modal-content-full-screen",
-                    readonly: true,
-                    {yaml.as_str()}
-                }
-            }
-        }
-        RenderState::Error(err) => rsx! {
-            div { {err.as_str()} }
-        },
+    let yaml = match get_data(cs, &cs_ra, env_id.clone(), product_id, template_id) {
+        Ok(yaml) => yaml,
+        Err(err) => return err,
+    };
+
+    let content = rsx! {
+        textarea { class: "form-control modal-content-full-screen", readonly: true, {yaml} }
     };
 
     rsx! {
         DialogTemplate { header: "Populated yaml", allocate_max_space: true, content }
+    }
+}
+
+fn get_data<'s>(
+    mut cs: Signal<ShowPopulatedYamlState>,
+    cs_ra: &'s ShowPopulatedYamlState,
+    env_id: Rc<String>,
+    product_id: Rc<String>,
+    template_id: Rc<String>,
+) -> Result<&'s str, Element> {
+    match cs_ra.yaml.as_ref() {
+        RenderState::None => {
+            let env_id = env_id.to_string();
+            let product_id = product_id.to_string();
+            let template_id = template_id.to_string();
+            spawn(async move {
+                match crate::api::templates::load_yaml(env_id, product_id, template_id).await {
+                    Ok(result) => {
+                        cs.write().yaml.set_loaded(result.yaml);
+                    }
+                    Err(err) => {
+                        cs.write().yaml.set_error(err.to_string());
+                    }
+                }
+            });
+            return Err(crate::icons::loading_icon());
+        }
+        RenderState::Loading => {
+            return Err(crate::icons::loading_icon());
+        }
+        RenderState::Loaded(yaml) => {
+            return Ok(yaml.as_str());
+        }
+        RenderState::Error(err) => {
+            return Err(crate::icons::render_error(err));
+        }
     }
 }
 
@@ -63,28 +75,4 @@ impl ShowPopulatedYamlState {
             yaml: DataState::new(),
         }
     }
-}
-#[derive(Serialize, Deserialize, Debug)]
-pub struct PopulatedYamlModelApiModel {
-    pub yaml: String,
-}
-
-#[server]
-async fn load_yaml(
-    env_id: String,
-    env: String,
-    name: String,
-) -> Result<PopulatedYamlModelApiModel, ServerFnError> {
-    use crate::server::templates_grpc::*;
-    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
-
-    let response = ctx
-        .templates_grpc
-        .compile_yaml(CompileYamlRequest { env, name })
-        .await
-        .unwrap();
-
-    Ok(PopulatedYamlModelApiModel {
-        yaml: response.yaml,
-    })
 }

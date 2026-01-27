@@ -13,22 +13,21 @@ pub enum EditTemplateDialogData {
 
 pub struct EditTemplateState {
     pub tabs: EditTemplateTab,
-    pub env_id: Rc<String>,
-    pub env: DialogValue<String>,
-    pub name: DialogValue<String>,
+    pub product_id: DialogValue<String>,
+    pub template_id: DialogValue<String>,
     pub yaml: DialogValue<String>,
     pub init_data: EditTemplateDialogData,
     pub init_from_other_template: Option<LoadDataFromTemplate>,
 }
 
 impl EditTemplateState {
-    pub fn new(env_id: Rc<String>, data: EditTemplateDialogData) -> Self {
+    pub fn new(data: EditTemplateDialogData) -> Self {
         match &data {
             EditTemplateDialogData::New => Self {
                 tabs: Default::default(),
-                env_id,
-                env: Default::default(),
-                name: Default::default(),
+
+                product_id: Default::default(),
+                template_id: Default::default(),
                 yaml: Default::default(),
                 init_data: data,
                 init_from_other_template: None,
@@ -39,9 +38,8 @@ impl EditTemplateState {
                     init_status: Default::default(),
                 }),
                 tabs: Default::default(),
-                env_id,
-                env: DialogValue::new(template.env.to_string()),
-                name: DialogValue::new(template.name.to_string()),
+                product_id: DialogValue::new(template.product_id.to_string()),
+                template_id: DialogValue::new(template.template_id.to_string()),
                 yaml: Default::default(),
                 init_data: data,
             },
@@ -51,9 +49,8 @@ impl EditTemplateState {
                     init_status: Default::default(),
                 }),
                 tabs: Default::default(),
-                env_id,
-                env: DialogValue::new(template.env.to_string()),
-                name: Default::default(),
+                product_id: DialogValue::new(template.product_id.to_string()),
+                template_id: Default::default(),
                 yaml: Default::default(),
                 init_data: data,
             },
@@ -61,9 +58,9 @@ impl EditTemplateState {
     }
 
     pub fn save_button_disabled(&self) -> bool {
-        return !self.name.is_value_updated()
+        return !self.product_id.is_value_updated()
             && !self.yaml.is_value_updated()
-            && !self.env.is_value_updated();
+            && !self.template_id.is_value_updated();
     }
 
     pub fn is_new_template(&self) -> bool {
@@ -83,8 +80,8 @@ impl EditTemplateState {
 
     pub fn unwrap_into_http_model(&self) -> UpdateTemplateHttpModel {
         UpdateTemplateHttpModel {
-            env: self.env.get_value().to_string(),
-            name: self.name.get_value().to_string(),
+            product_id: self.product_id.get_value().to_string(),
+            template_id: self.template_id.get_value().to_string(),
             yaml: self.yaml.get_value().to_string(),
         }
     }

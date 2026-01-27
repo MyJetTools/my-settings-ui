@@ -19,6 +19,6 @@ impl FilterSecret {
         if self.0.len() == 0 {
             return true;
         }
-        itm.name.to_lowercase().contains(&self.0)
+        itm.secret_id.to_lowercase().contains(&self.0)
     }
 }

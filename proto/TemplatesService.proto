@@ -3,59 +3,55 @@ syntax = "proto3";
 import "google/protobuf/empty.proto";
 package templates;
 
-
-message GetTemplateRequest {
-   string Env = 1;
-   string Name = 2;
+message GetTemplateContentGrpcRequest {
+  string product_id  = 1;
+  string template_id = 2;
 }
 
-message GetTemplateResponse {
-    string Yaml = 1;
- }
-
-
-
-message CompileYamlRequest {
-    string Env = 1;
-    string Name = 2;
+message GetTemplateContentGrpcResponse {
+  string content = 1;
 }
 
- message  CompileYamlResponse {
-    string Yaml = 1;
- }
-
-
- message SaveTemplateRequest {
-   string Env = 1;
-   string Name = 2;
-   string Yaml = 3;
+message CompileYamlGrpcRequest {
+  string product_id  = 1;
+  string template_id = 2;
 }
 
-message DeleteTemplateRequest {
-   string Env = 1;
-   string Name = 2;
+message CompileYamlGrpcResponse {
+  string yaml = 1;
 }
 
-message TemplateListItem{
-   string Env = 1;
-   string Name = 2;
-   string Created = 3;
-   string Updated = 4;
-   int64 LastRequests = 5;
-   bool HasMissingPlaceholders = 6;
+message SaveTemplateGrpcRequest {
+  string product_id  = 1;
+  string template_id = 2;
+  string yaml        = 3;
+}
+
+message DeleteTemplateGrpcRequest {
+  string product_id  = 1;
+  string template_id = 2;
+}
+
+message TemplateListItemGrpcModel{
+  string product_id               = 1;
+  string template_id              = 2;
+  string created                  = 3;
+  string updated                  = 4;
+  int64  last_requests            = 5;
+  bool   has_missing_placeholders = 6;
 }
 
 message ServerInfoResponse{
-   string EnvName = 1;
+  string env_name = 1;
 }
 
 service Templates {
-    rpc GetServerInfo(google.protobuf.Empty) returns (ServerInfoResponse);
-    rpc Get(GetTemplateRequest) returns (GetTemplateResponse);
-    rpc GetAll(google.protobuf.Empty) returns (stream TemplateListItem);
+  rpc GetServerInfo(google.protobuf.Empty) returns (ServerInfoResponse);
+  rpc GetTemplateContent(GetTemplateContentGrpcRequest) returns (GetTemplateContentGrpcResponse);
+  rpc GetAll(google.protobuf.Empty) returns (stream TemplateListItemGrpcModel);
 
-    rpc Save(SaveTemplateRequest) returns (google.protobuf.Empty);
-    rpc CompileYaml(CompileYamlRequest) returns (CompileYamlResponse);
-    rpc Delete(DeleteTemplateRequest) returns (google.protobuf.Empty);
-    rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
- }
+  rpc Save(SaveTemplateGrpcRequest) returns (google.protobuf.Empty);
+  rpc CompileYaml(CompileYamlGrpcRequest) returns (CompileYamlGrpcResponse);
+  rpc Delete(DeleteTemplateGrpcRequest) returns (google.protobuf.Empty);
+  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
+}

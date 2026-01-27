@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use dioxus_utils::*;
 
-use crate::{dialogs::*, icons::*, models::*};
+use crate::{dialogs::*, models::*};
 
 use super::states::*;
 
@@ -14,12 +14,12 @@ pub fn EditTemplate(
     data: EditTemplateDialogData,
     on_ok: EventHandler<UpdateTemplateHttpModel>,
 ) -> Element {
-    let mut component_state = use_signal(move || EditTemplateState::new(env_id, data));
+    let mut cs = use_signal(move || EditTemplateState::new(data));
 
-    let cs_read_access = component_state.read();
+    let cs_ra = cs.read();
 
-    if let Some(init_data) = cs_read_access.init_from_other_template.as_ref() {
-        match get_data(component_state, &cs_read_access, init_data) {
+    if let Some(init_data) = cs_ra.init_from_other_template.as_ref() {
+        match get_data(cs, init_data, &env_id) {
             Ok(_) => (),
             Err(err) => {
                 return err;
@@ -27,7 +27,7 @@ pub fn EditTemplate(
         }
     }
 
-    let tabs_content = match cs_read_access.tabs {
+    let tabs_content = match cs_ra.tabs {
         EditTemplateTab::ChooseSecret => {
             rsx! {
                 ul { class: "nav nav-tabs",
@@ -39,16 +39,17 @@ pub fn EditTemplate(
                             class: "nav-link",
                             style: "cursor:pointer",
                             onclick: move |_| {
-                                component_state.write().tabs = EditTemplateTab::PeekSecret;
+                                cs.write().tabs = EditTemplateTab::PeekSecret;
                             },
                             "Peek secret"
                         }
                     }
                 }
                 ChooseSecret {
-                    env_id: cs_read_access.env_id.clone(),
+                    env_id: env_id.clone(),
+                    product_id: cs_ra.product_id.get_value(),
                     on_selected: move |selected: String| {
-                        component_state.write().add_secret_to_yaml(selected.as_str());
+                        cs.write().add_secret_to_yaml(selected.as_str());
                     },
                 }
             }
@@ -61,7 +62,7 @@ pub fn EditTemplate(
                             class: "nav-link",
                             style: "cursor:pointer",
                             onclick: move |_| {
-                                component_state.write().tabs = EditTemplateTab::ChooseSecret;
+                                cs.write().tabs = EditTemplateTab::ChooseSecret;
                             },
                             "Choose secret"
                         }
@@ -71,8 +72,9 @@ pub fn EditTemplate(
                     }
                 }
                 PeekSecrets {
-                    env_id: cs_read_access.env_id.clone(),
-                    yaml: cs_read_access.yaml.get_value(),
+                    env_id: env_id.clone(),
+                    product_id: cs_ra.product_id.get_value(),
+                    yaml: cs_ra.yaml.get_value(),
                 }
             }
         }
@@ -85,24 +87,24 @@ pub fn EditTemplate(
                     div { class: "form-floating mb-3",
                         input {
                             class: "form-control",
-                            disabled: !cs_read_access.is_new_template(),
+                            disabled: !cs_ra.is_new_template(),
                             oninput: move |cx| {
-                                component_state.write().env.set_value(cx.value());
+                                cs.write().product_id.set_value(cx.value());
                             },
-                            value: cs_read_access.env.as_str(),
+                            value: cs_ra.product_id.get_value().as_str(),
                         }
 
-                        label { "Env" }
+                        label { "ProductId" }
                     }
 
                     div { class: "form-floating mb-3",
                         input {
                             class: "form-control",
-                            disabled: !cs_read_access.is_new_template(),
+                            disabled: !cs_ra.is_new_template(),
                             oninput: move |cx| {
-                                component_state.write().name.set_value(cx.value());
+                                cs.write().template_id.set_value(cx.value());
                             },
-                            value: cs_read_access.name.as_str(),
+                            value: cs_ra.template_id.as_str(),
                         }
                         label { "Name" }
                     }
@@ -111,9 +113,9 @@ pub fn EditTemplate(
                             class: "form-control",
                             style: "min-height:500px;font-family: monospace;",
                             oninput: move |cx| {
-                                component_state.write().yaml.set_value(cx.value());
+                                cs.write().yaml.set_value(cx.value());
                             },
-                            value: cs_read_access.yaml.as_str(),
+                            value: cs_ra.yaml.as_str(),
                         }
                         label { "Yaml" }
                     }
@@ -132,9 +134,9 @@ pub fn EditTemplate(
             ok_button: rsx! {
                 button {
                     class: "btn btn-primary",
-                    disabled: cs_read_access.save_button_disabled(),
+                    disabled: cs_ra.save_button_disabled(),
                     onclick: move |_| {
-                        let read_access = component_state.read();
+                        let read_access = cs.read();
                         let result = read_access.unwrap_into_http_model();
                         on_ok.call(result);
                     },
@@ -146,28 +148,31 @@ pub fn EditTemplate(
 }
 
 fn get_data(
-    mut component_state: Signal<EditTemplateState>,
-    cs_read_access: &EditTemplateState,
+    mut cs: Signal<EditTemplateState>,
     init_data: &LoadDataFromTemplate,
+    env_id: &Rc<String>,
 ) -> Result<(), Element> {
     match init_data.init_status.as_ref() {
         RenderState::None => {
-            let env_id = cs_read_access.env_id.clone();
-            let env = init_data.src_template.env.to_string();
-            let name = init_data.src_template.name.to_string();
+            let env_id = env_id.to_string();
+            let product_id = init_data.src_template.product_id.to_string();
+            let template_id = init_data.src_template.template_id.to_string();
             spawn(async move {
-                component_state
-                    .write()
+                cs.write()
                     .init_from_other_template
                     .as_mut()
                     .unwrap()
                     .init_status
                     .set_loading();
-                match crate::api::templates::get_template_content(env_id.to_string(), env, name)
-                    .await
+                match crate::api::templates::get_template_content(
+                    env_id.to_string(),
+                    product_id,
+                    template_id,
+                )
+                .await
                 {
                     Ok(data) => {
-                        let mut write_access = component_state.write();
+                        let mut write_access = cs.write();
                         write_access.yaml.init(data);
                         write_access
                             .init_from_other_template
@@ -177,8 +182,7 @@ fn get_data(
                             .set_value(());
                     }
                     Err(err) => {
-                        component_state
-                            .write()
+                        cs.write()
                             .init_from_other_template
                             .as_mut()
                             .unwrap()
@@ -187,20 +191,14 @@ fn get_data(
                     }
                 }
             });
-            return Err(rsx! {
-                LoadingIcon {}
-            });
+            return Err(crate::icons::loading_icon());
         }
         RenderState::Loading => {
-            return Err(rsx! {
-                LoadingIcon {}
-            });
+            return Err(crate::icons::loading_icon());
         }
         RenderState::Loaded(_) => Ok(()),
         RenderState::Error(err) => {
-            return Err(rsx! {
-                div { {err.as_str()} }
-            })
+            return Err(crate::icons::render_error(err));
         }
     }
 }

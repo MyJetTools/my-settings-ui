@@ -3,7 +3,6 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 use dioxus_utils::*;
-use serde::*;
 
 use crate::icons::*;
 
@@ -12,62 +11,28 @@ use super::*;
 #[component]
 pub fn EditSecret(
     env_id: Rc<String>,
-    name: String,
+    product_id: Option<Rc<String>>,
+    secret_id: Rc<String>,
     on_ok: EventHandler<EditSecretResult>,
 ) -> Element {
-    let mut component_state = use_signal(|| EditSecretState::new(name.clone()));
-    let component_state_read_access = component_state.read();
+    let mut cs = use_signal(|| EditSecretState::new(secret_id.to_string()));
+    let cs_ra = cs.read();
 
-    match component_state_read_access.value_on_init.as_ref() {
-        RenderState::None => {
-            let env_id = env_id.clone();
-            spawn(async move {
-                component_state.write().value_on_init.set_loading();
-                match load_secret(env_id.to_string(), name).await {
-                    Ok(value) => {
-                        component_state.write().init_value(SecretValue {
-                            value: value.value,
-                            level: value.level.to_string(),
-                        });
-                    }
-                    Err(err) => {
-                        component_state
-                            .write()
-                            .value_on_init
-                            .set_error(err.to_string());
-                    }
-                };
-            });
-
-            return rsx! {
-                LoadingIcon {}
-            };
-        }
-        RenderState::Loading => {
-            return rsx! {
-                LoadingIcon {}
-            }
-        }
-
-        RenderState::Loaded(_) => {}
-
-        RenderState::Error(err) => {
-            return rsx! {
-                div { {err.as_str()} }
-            }
-        }
-    }
+    match get_data(cs, &cs_ra, &env_id, &product_id, &secret_id) {
+        Ok(_) => {}
+        Err(err) => return err,
+    };
 
     let content = rsx! {
 
         div { class: "form-floating mb-3",
             input {
                 class: "form-control",
-                disabled: !component_state_read_access.new_secret,
+                disabled: !cs_ra.new_secret,
                 oninput: move |cx| {
-                    component_state.write().name = cx.value();
+                    cs.write().name = cx.value();
                 },
-                value: component_state_read_access.name.as_str(),
+                value: cs_ra.name.as_str(),
             }
             label { "Secret name" }
         }
@@ -76,9 +41,9 @@ pub fn EditSecret(
             input {
                 class: "form-control",
                 oninput: move |cx| {
-                    component_state.write().value.value = cx.value();
+                    cs.write().value.value = cx.value();
                 },
-                value: component_state_read_access.value.value.as_str(),
+                value: cs_ra.value.value.as_str(),
             }
             label { "Secret value" }
         }
@@ -88,9 +53,9 @@ pub fn EditSecret(
                 class: "form-control",
                 r#type: "number",
                 oninput: move |cx| {
-                    component_state.write().value.level = cx.value();
+                    cs.write().value.level = cx.value();
                 },
-                value: component_state_read_access.value.level.as_str(),
+                value: cs_ra.value.level.as_str(),
             }
             label { "Secret level" }
         }
@@ -104,9 +69,9 @@ pub fn EditSecret(
             ok_button: rsx! {
                 button {
                     class: "btn btn-primary",
-                    disabled: component_state_read_access.save_button_is_disabled(),
+                    disabled: cs_ra.save_button_is_disabled(),
                     onclick: move |_| {
-                        let result = component_state.read().get_result();
+                        let result = cs.read().get_result();
                         on_ok.call(result);
                         consume_context::<Signal<DialogState>>().set(DialogState::None);
                     },
@@ -118,36 +83,54 @@ pub fn EditSecret(
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SecretValueApiModel {
-    pub value: String,
-    pub level: i32,
-}
+fn get_data(
+    mut cs: Signal<EditSecretState>,
+    cs_ra: &EditSecretState,
+    env_id: &str,
+    product_id: &Option<Rc<String>>,
+    secret_id: &str,
+) -> Result<(), Element> {
+    match cs_ra.value_on_init.as_ref() {
+        RenderState::None => {
+            let env_id = env_id.to_string();
+            let product_id = match product_id {
+                Some(product_id) => Some(product_id.to_string()),
+                None => None,
+            };
+            let secret_id = secret_id.to_string();
+            spawn(async move {
+                cs.write().value_on_init.set_loading();
+                match crate::api::secrets::load_secret_value(env_id, product_id, secret_id).await {
+                    Ok(value) => {
+                        cs.write().init_value(SecretValue {
+                            value: value.value,
+                            level: value.level.to_string(),
+                        });
+                    }
+                    Err(err) => {
+                        cs.write().value_on_init.set_error(err.to_string());
+                    }
+                };
+            });
 
-#[server]
-pub async fn load_secret(
-    env_id: String,
-    secret_id: String,
-) -> Result<SecretValueApiModel, ServerFnError> {
-    use crate::server::secrets_grpc::*;
-    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
+            return Err(crate::icons::loading_icon());
+        }
+        RenderState::Loading => {
+            return Err(crate::icons::loading_icon());
+        }
 
-    let response = ctx
-        .secrets_grpc
-        .get(GetSecretRequest { name: secret_id })
-        .await
-        .unwrap();
+        RenderState::Loaded(_) => {
+            return Ok(());
+        }
 
-    let result = SecretValueApiModel {
-        value: response.value,
-        level: response.level,
-    };
-
-    Ok(result)
+        RenderState::Error(err) => {
+            return Err(crate::icons::render_error(err));
+        }
+    }
 }
 
 pub struct EditSecretResult {
-    pub name: String,
+    pub secret_id: String,
     pub value: String,
     pub level: i32,
 }
@@ -215,7 +198,7 @@ impl EditSecretState {
 
     pub fn get_result(&self) -> EditSecretResult {
         EditSecretResult {
-            name: self.name.clone(),
+            secret_id: self.name.clone(),
             value: self.value.value.clone(),
             level: self.value.level.parse().unwrap(),
         }

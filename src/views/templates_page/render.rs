@@ -14,53 +14,22 @@ use super::state::*;
 #[component]
 pub fn TemplatesPage() -> Element {
     let mut cs = use_signal(|| TemplatesState::default());
-
     let cs_ra = cs.read();
-    let mut main_state = consume_context::<Signal<MainState>>();
 
-    let main_state_read_access = main_state.read();
+    let ms = consume_context::<Signal<MainState>>();
+    let ms_ra = ms.read();
 
-    let selected_env = main_state_read_access.get_selected_env();
+    let selected_env = ms_ra.get_selected_env();
+
+    let templates = match get_data(&ms_ra, selected_env.clone()) {
+        Ok(items) => items,
+        Err(err) => return err,
+    };
 
     let selected_env_id_to_copy = selected_env.clone();
 
     let mut filter_template = consume_context::<Signal<FilterTemplate>>();
     let filter_template_read_access = filter_template.read();
-
-    let templates = match main_state_read_access.templates.as_ref() {
-        RenderState::None => {
-            let env_id_request = selected_env.clone();
-            spawn(async move {
-                main_state.write().templates.set_loading();
-                match crate::api::templates::get_templates(env_id_request.to_string()).await {
-                    Ok(templates) => {
-                        main_state
-                            .write()
-                            .templates
-                            .set_loaded(templates.into_iter().map(Rc::new).collect());
-                    }
-                    Err(err) => {
-                        main_state.write().templates.set_error(err.to_string());
-                    }
-                }
-            });
-
-            return rsx! {
-                LoadingIcon {}
-            };
-        }
-        RenderState::Loading => {
-            return rsx! {
-                LoadingIcon {}
-            }
-        }
-        RenderState::Loaded(result) => result,
-        RenderState::Error(err) => {
-            return rsx! {
-                {err.as_str()}
-            }
-        }
-    };
 
     let last_edited = get_last_edited(templates);
     let templates = templates
@@ -78,26 +47,22 @@ pub fn TemplatesPage() -> Element {
             let template_to_copy = itm.clone();
             let template_to_edit = itm.clone();
 
-            let env = Rc::new(itm.env.to_string());
-            let name = Rc::new(itm.name.to_string());
+            let product_id = Rc::new(itm.product_id.to_string());
+            let template_id = Rc::new(itm.template_id.to_string());
 
-            let show_populated_yaml_env = env.clone();
-            let show_populated_yaml_name = name.clone();
+            let show_populated_yaml_product_id = product_id.clone();
+            let show_populated_yaml_template_id = template_id.clone();
 
-            let delete_template_env = env.clone();
-            let delete_template_name = name.clone();
+            let delete_product_id = product_id.clone();
+            let delete_template_id = template_id.clone();
 
             let env_id_edit = selected_env_id_to_copy.clone();
             let env_id_copy = selected_env_id_to_copy.clone();
-            let env_id_delete = selected_env_id_to_copy.clone();
+            let delete_env_id = selected_env_id_to_copy.clone();
             let env_id_show_populated_yaml = selected_env_id_to_copy.clone();
 
-            let env_id_select = env.clone();
-
-            let name_select = name.clone();
-
-            let last_edited = if last_edited.0.as_str() == env.as_str()
-                && last_edited.1.as_str() == name.as_str()
+            let last_edited = if last_edited.0.as_str() == product_id.as_str()
+                && last_edited.1.as_str() == template_id.as_str()
             {
                 Some(rsx!(
                     span {
@@ -162,29 +127,29 @@ pub fn TemplatesPage() -> Element {
             };
 
             let copy_to_env_selected_env_id = selected_env.clone();
-            let copy_to_env_template_env = env.clone();
-            let copy_to_env_template_name = name.clone();
+            let copy_to_env_template_product_id = product_id.clone();
+            let copy_to_env_template_template_id = template_id.clone();
 
             let copy_to_env = rsx! {
                 button {
                     class: "btn btn-sm btn-danger",
                     onclick: move |_| {
                         let from_env_id = copy_to_env_selected_env_id.clone();
-                        let template_env = copy_to_env_template_env.clone();
-                        let template_name = copy_to_env_template_name.clone();
+                        let product_id = copy_to_env_template_product_id.clone();
+                        let template_id = copy_to_env_template_template_id.clone();
                         consume_context::<Signal<DialogState>>()
                             .set(DialogState::CopyToEnvConfirmation {
                                 from_env_id: from_env_id.clone(),
                                 on_ok: EventHandler::new(move |env_id: String| {
                                     let from_env_id = from_env_id.clone();
-                                    let template_env = template_env.clone();
-                                    let template_name = template_name.clone();
+                                    let product_id = product_id.clone();
+                                    let template_id = template_id.clone();
                                     spawn(async move {
                                         crate::api::templates::copy_template_to_other_env(
                                                 from_env_id.to_string(),
                                                 env_id.to_string(),
-                                                template_env.to_string(),
-                                                template_name.to_string(),
+                                                product_id.to_string(),
+                                                template_id.to_string(),
                                             )
                                             .await
                                             .unwrap();
@@ -200,23 +165,21 @@ pub fn TemplatesPage() -> Element {
                 }
             };
 
-            let selected = cs_ra.is_selected(&env_id_select.as_str(), name_select.as_str());
+            let selected = cs_ra.is_selected(&product_id.as_str(), template_id.as_str());
 
             let selected = crate::icons::render_bool_checkbox(selected, EventHandler::new(move |value|{
-                cs.write().set_selected(env_id_select.as_str(), name_select.as_str(), value);
+                cs.write().set_selected(product_id.as_str(), template_id.as_str(), value);
             }));
-
-
 
 
             rsx! {
                 tr { style: "border-top: 1px solid lightgray",
                     td { {alert} }
                     td { {selected} }
-                    td { "{itm.env}" }
+                    td { "{itm.product_id}" }
                     td { "/" }
                     td {
-                        "{itm.name}"
+                        "{itm.template_id}"
                         {last_edited}
                     }
                     td { {created.without_microseconds()} }
@@ -229,13 +192,13 @@ pub fn TemplatesPage() -> Element {
                                 class: "btn btn-sm btn-success",
                                 onclick: move |_| {
                                     let env_id = env_id_show_populated_yaml.clone();
-                                    let env = show_populated_yaml_env.clone();
-                                    let name = show_populated_yaml_name.clone();
+                                    let product_id = show_populated_yaml_product_id.clone();
+                                    let template_id = show_populated_yaml_template_id.clone();
                                     consume_context::<Signal<DialogState>>()
                                         .set(DialogState::ShowPopulatedYaml {
                                             env_id,
-                                            env,
-                                            name,
+                                            product_id,
+                                            template_id,
                                         });
                                 },
                                 {view_template_icon()}
@@ -246,21 +209,23 @@ pub fn TemplatesPage() -> Element {
                             button {
                                 class: "btn btn-sm btn-danger",
                                 onclick: move |_| {
-                                    let env_id = env_id_delete.clone();
-                                    let env = delete_template_env.clone();
-                                    let name = delete_template_name.clone();
+
+                                    let env_id = delete_env_id.clone();
+                                    let product_id = delete_product_id.clone();
+                                    let template_id = delete_template_id.clone();
+
                                     consume_context::<Signal<DialogState>>()
                                         .set(DialogState::Confirmation {
                                             content: format!(
                                                 "Please confirm deletion of template {}/{}",
-                                                delete_template_env.as_str(),
-                                                delete_template_name.as_str(),
+                                                product_id.as_str(),
+                                                template_id.as_str(),
                                             ),
                                             on_ok: EventHandler::new(move |_| {
                                                 exec_delete_template(
                                                     env_id.to_string(),
-                                                    env.to_string(),
-                                                    name.to_string(),
+                                                    product_id.to_string(),
+                                                    template_id.to_string(),
                                                 );
                                             }),
                                         })
@@ -409,9 +374,9 @@ fn exec_save_template(env_id: String, data: UpdateTemplateHttpModel) {
     });
 }
 
-fn exec_delete_template(env_id: String, env: String, name: String) {
+fn exec_delete_template(env_id: String, product_id: String, template_id: String) {
     spawn(async move {
-        match crate::api::templates::delete_template(env_id, env, name).await {
+        match crate::api::templates::delete_template(env_id, product_id, template_id).await {
             Ok(_) => {
                 consume_context::<Signal<DialogState>>().set(DialogState::None);
                 consume_context::<Signal<MainState>>().write().drop_data();
@@ -424,21 +389,57 @@ fn exec_delete_template(env_id: String, env: String, name: String) {
     });
 }
 
-fn get_last_edited(templates: &Vec<Rc<TemplateHttpModel>>) -> (String, String) {
+fn get_last_edited(templates: &[Rc<TemplateHttpModel>]) -> (String, String) {
     let mut max = 0;
 
-    let mut env = "".to_string();
-    let mut name = "".to_string();
+    let mut product_id = "".to_string();
+    let mut template_id = "".to_string();
 
     for template in templates {
         if template.updated > 0 {
             if template.updated > max {
                 max = template.updated;
-                env = template.env.clone();
-                name = template.name.clone();
+                product_id = template.product_id.clone();
+                template_id = template.template_id.clone();
             }
         }
     }
 
-    (env, name)
+    (product_id, template_id)
+}
+
+fn get_data<'s>(
+    ms_ra: &'s MainState,
+    selected_env: Rc<String>,
+) -> Result<&'s [Rc<TemplateHttpModel>], Element> {
+    match ms_ra.templates.as_ref() {
+        RenderState::None => {
+            let env_id_request = selected_env.clone();
+            spawn(async move {
+                let mut ms = consume_context::<Signal<MainState>>();
+                ms.write().templates.set_loading();
+                match crate::api::templates::get_templates(env_id_request.to_string()).await {
+                    Ok(templates) => {
+                        ms.write()
+                            .templates
+                            .set_loaded(templates.into_iter().map(Rc::new).collect());
+                    }
+                    Err(err) => {
+                        ms.write().templates.set_error(err.to_string());
+                    }
+                }
+            });
+
+            return Err(crate::icons::loading_icon());
+        }
+        RenderState::Loading => {
+            return Err(crate::icons::loading_icon());
+        }
+        RenderState::Loaded(result) => {
+            return Ok(result.as_slice());
+        }
+        RenderState::Error(err) => {
+            return Err(crate::icons::render_error(err));
+        }
+    }
 }

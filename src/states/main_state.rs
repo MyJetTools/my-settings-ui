@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use dioxus_utils::DataState;
 
-use crate::{models::*, storage::ENV_LOCAL_STORAGE_KEY};
+use crate::{models::*, storage::*};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum LocationState {
@@ -31,6 +31,7 @@ pub struct MainState {
     pub envs: DataState<Vec<Rc<String>>>,
     pub user: String,
     current_env_id: Rc<String>,
+    selected_product_id: Option<Rc<String>>,
     pub location: LocationState,
     pub templates: DataState<Vec<Rc<TemplateHttpModel>>>,
     pub secrets: DataState<Vec<SecretHttpModel>>,
@@ -42,12 +43,17 @@ impl MainState {
         let current_env_id = dioxus_utils::js::GlobalAppSettings::get_local_storage()
             .get(ENV_LOCAL_STORAGE_KEY)
             .unwrap_or_default();
+
+        let selected_product_id = dioxus_utils::js::GlobalAppSettings::get_local_storage()
+            .get(PRODUCT_ID_LOCAL_STORAGE_KEY);
+
         Self {
             envs: DataState::default(),
             location,
             templates: DataState::default(),
             secrets: DataState::default(),
             current_env_id: Rc::new(current_env_id),
+            selected_product_id: selected_product_id.map(Rc::new),
             user: "".to_string(),
             prompt_ssh_key: None,
         }
@@ -67,6 +73,10 @@ impl MainState {
 
     pub fn get_selected_env(&self) -> Rc<String> {
         self.current_env_id.clone()
+    }
+
+    pub fn get_selected_product_id(&self) -> Option<Rc<String>> {
+        self.selected_product_id.clone()
     }
 
     pub fn set_location(&mut self, location: LocationState) {

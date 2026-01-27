@@ -3,20 +3,29 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 use dioxus_utils::*;
 
-use crate::{icons::*, models::*};
+use crate::models::*;
 
 #[component]
-pub fn SelectSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> Element {
+pub fn SelectSecret(
+    env_id: Rc<String>,
+    product_id: String,
+    on_selected: EventHandler<String>,
+) -> Element {
     let mut component_state = use_signal(|| SelectSecretState::default());
 
     let component_state_read_access = component_state.read();
 
     let secrets = match component_state_read_access.secrets.as_ref() {
         RenderState::None => {
-            let env_id = env_id.clone();
+            let env_id = env_id.to_string();
+            let product_id = if product_id.len() == 0 {
+                None
+            } else {
+                Some(product_id.to_string())
+            };
             spawn(async move {
                 component_state.write().secrets.set_loading();
-                match crate::api::secrets::load_secrets(env_id.to_string()).await {
+                match crate::api::secrets::load_secrets(env_id, product_id).await {
                     Ok(data) => {
                         component_state
                             .write()
@@ -28,20 +37,14 @@ pub fn SelectSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                     }
                 }
             });
-            return rsx! {
-                LoadingIcon {}
-            };
+            return crate::icons::loading_icon();
         }
         RenderState::Loading => {
-            return rsx! {
-                LoadingIcon {}
-            }
+            return crate::icons::loading_icon();
         }
         RenderState::Loaded(items) => items,
         RenderState::Error(err) => {
-            return rsx! {
-                div { {err.as_str()} }
-            };
+            return crate::icons::render_error(err.as_str());
         }
     };
 
@@ -55,11 +58,11 @@ pub fn SelectSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                     button {
                         class: "btn btn-sm btn-primary",
                         onclick: move |_| {
-                            on_selected.call(itm.name.to_string());
+                            on_selected.call(itm.secret_id.to_string());
                         },
                         "Copy Value"
                     }
-                    "{itm.name.as_str()}"
+                    "{itm.secret_id.as_str()}"
                 }
             }
         });
@@ -89,6 +92,6 @@ impl SelectSecretState {
             return false;
         }
 
-        item.name.to_lowercase().contains(self.filter.as_str())
+        item.secret_id.to_lowercase().contains(self.filter.as_str())
     }
 }

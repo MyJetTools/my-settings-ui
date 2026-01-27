@@ -2,13 +2,15 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 use dioxus_utils::{DataState, RenderState};
-use serde::*;
 
 use crate::dialogs::*;
-use crate::icons::*;
 
 #[component]
-pub fn ShowSecret(env_id: Rc<String>, secret: Rc<String>) -> Element {
+pub fn ShowSecret(
+    env_id: Rc<String>,
+    product_id: Option<Rc<String>>,
+    secret_id: Rc<String>,
+) -> Element {
     let mut component_state = use_signal(|| ShowSecretState::new());
 
     let component_state_read_access = component_state.read();
@@ -16,10 +18,17 @@ pub fn ShowSecret(env_id: Rc<String>, secret: Rc<String>) -> Element {
     let content = match component_state_read_access.value.as_ref() {
         RenderState::None => {
             let env_id = env_id.clone();
-            let secret_name = secret.clone();
+            let product_id = product_id.clone();
+            let secret_id = secret_id.clone();
             spawn(async move {
                 component_state.write().value.set_loading();
-                match load_secret_value(env_id.to_string(), secret_name.to_string()).await {
+                match crate::api::secrets::load_secret_value(
+                    env_id.to_string(),
+                    product_id.map(|itm| itm.to_string()),
+                    secret_id.to_string(),
+                )
+                .await
+                {
                     Ok(value) => {
                         component_state.write().value.set_loaded(value.value);
                     }
@@ -28,14 +37,10 @@ pub fn ShowSecret(env_id: Rc<String>, secret: Rc<String>) -> Element {
                     }
                 }
             });
-            rsx! {
-                div {}
-            }
+            return crate::icons::loading_icon();
         }
         RenderState::Loading => {
-            rsx! {
-                LoadingIcon {}
-            }
+            return crate::icons::loading_icon();
         }
         RenderState::Loaded(value) => rsx! {
             div { class: "form-floating mb-3",
@@ -48,20 +53,13 @@ pub fn ShowSecret(env_id: Rc<String>, secret: Rc<String>) -> Element {
             }
         },
         RenderState::Error(err) => {
-            rsx! {
-                div { {err.as_str()} }
-            }
+            return crate::icons::render_error(err);
         }
     };
 
     rsx! {
-        DialogTemplate { header: "Secret [{secret.as_str()}] value", content }
+        DialogTemplate { header: "Secret [{secret_id.as_str()}] value", content }
     }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SecretValueApiModel {
-    pub value: String,
 }
 
 pub struct ShowSecretState {
@@ -74,25 +72,4 @@ impl ShowSecretState {
             value: DataState::new(),
         }
     }
-}
-
-#[server]
-async fn load_secret_value(
-    env_id: String,
-    secret_id: String,
-) -> Result<SecretValueApiModel, ServerFnError> {
-    use crate::server::secrets_grpc::*;
-    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
-
-    let response = ctx
-        .secrets_grpc
-        .get(GetSecretRequest { name: secret_id })
-        .await
-        .unwrap();
-
-    let result = SecretValueApiModel {
-        value: response.value,
-    };
-
-    Ok(result)
 }

@@ -13,7 +13,12 @@ pub async fn get_templates(env_id: String) -> Result<Vec<TemplateHttpModel>, Ser
         .get_all(())
         .await
         .unwrap()
-        .into_b_tree_map(|itm| (format!("{}/{}", itm.name, itm.env), itm.into()))
+        .into_b_tree_map(|itm| {
+            (
+                format!("{}/{}", itm.template_id, itm.product_id),
+                itm.into(),
+            )
+        })
         .await
         .unwrap();
 
@@ -31,9 +36,9 @@ pub async fn save_template(
     let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
 
     ctx.templates_grpc
-        .save(SaveTemplateRequest {
-            env: data.env,
-            name: data.name,
+        .save(SaveTemplateGrpcRequest {
+            product_id: data.product_id,
+            template_id: data.template_id,
             yaml: data.yaml,
         })
         .await
@@ -45,35 +50,41 @@ pub async fn save_template(
 #[post("/api/templates/delete")]
 pub async fn delete_template(
     env_id: String,
-    env: String,
-    name: String,
+    product_id: String,
+    template_id: String,
 ) -> Result<(), ServerFnError> {
     use crate::server::templates_grpc::*;
     let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
 
     ctx.templates_grpc
-        .delete(DeleteTemplateRequest { env, name })
+        .delete(DeleteTemplateGrpcRequest {
+            product_id,
+            template_id,
+        })
         .await
         .unwrap();
 
     Ok(())
 }
 
-#[get("/api/templates/get_content?env_id&env&name")]
+#[get("/api/templates/get_content?env_id&product_id&template_id")]
 pub async fn get_template_content(
     env_id: String,
-    env: String,
-    name: String,
+    product_id: String,
+    template_id: String,
 ) -> Result<String, ServerFnError> {
     use crate::server::templates_grpc::*;
     let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
 
     let response = ctx
         .templates_grpc
-        .get(GetTemplateRequest { env, name })
+        .get_template_content(GetTemplateContentGrpcRequest {
+            product_id,
+            template_id,
+        })
         .await
         .unwrap();
-    Ok(response.yaml)
+    Ok(response.content)
 }
 
 #[post("/api/templates/download_snapshot")]
@@ -81,7 +92,7 @@ pub async fn download_snapshot(
     env_id: String,
     request: Vec<DownloadFileRequestModel>,
 ) -> Result<String, ServerFnError> {
-    use crate::server::templates_grpc::GetTemplateRequest;
+    use crate::server::templates_grpc::*;
     use rust_extensions::base64::IntoBase64;
     let ctx = crate::server::APP_CTX.get_app_ctx(&env_id).await;
 
@@ -91,23 +102,22 @@ pub async fn download_snapshot(
     while let Some(next_item) = response.get_next_item().await {
         let next_item = next_item.unwrap();
 
-        if request
-            .iter()
-            .any(|itm| itm.env == next_item.env && itm.name == next_item.name)
-        {
-            let yaml = ctx
+        if request.iter().any(|itm| {
+            itm.product_id == next_item.product_id && itm.template_id == next_item.template_id
+        }) {
+            let template_content = ctx
                 .templates_grpc
-                .get(GetTemplateRequest {
-                    env: next_item.env.to_string(),
-                    name: next_item.name.to_string(),
+                .get_template_content(GetTemplateContentGrpcRequest {
+                    product_id: next_item.product_id.to_string(),
+                    template_id: next_item.template_id.to_string(),
                 })
                 .await
                 .unwrap();
 
             result.push(ExportItem {
-                env: next_item.env,
-                name: next_item.name,
-                yaml: yaml.yaml.into_bytes().into_base64(),
+                product_id: next_item.product_id,
+                template_id: next_item.template_id,
+                yaml: template_content.content.into_bytes().into_base64(),
             });
         }
     }
@@ -131,9 +141,9 @@ pub async fn upload_snapshot(env_id: String, snapshot: String) -> Result<(), Ser
 
     for itm in data {
         ctx.templates_grpc
-            .save(SaveTemplateRequest {
-                env: itm.env,
-                name: itm.name,
+            .save(SaveTemplateGrpcRequest {
+                product_id: itm.product_id,
+                template_id: itm.template_id,
                 yaml: itm.yaml,
             })
             .await
@@ -147,8 +157,8 @@ pub async fn upload_snapshot(env_id: String, snapshot: String) -> Result<(), Ser
 pub async fn copy_template_to_other_env(
     from_env_id: String,
     to_env_id: String,
-    env: String,
-    name: String,
+    product_id: String,
+    template_id: String,
 ) -> Result<(), ServerFnError> {
     use crate::server::templates_grpc::*;
     let from_env_ctx = crate::server::APP_CTX
@@ -159,19 +169,19 @@ pub async fn copy_template_to_other_env(
 
     let template_response = from_env_ctx
         .templates_grpc
-        .get(GetTemplateRequest {
-            env: env.to_string(),
-            name: name.to_string(),
+        .get_template_content(GetTemplateContentGrpcRequest {
+            product_id: product_id.to_string(),
+            template_id: template_id.to_string(),
         })
         .await
         .unwrap();
 
     to_env_ctx
         .templates_grpc
-        .save(SaveTemplateRequest {
-            env: env,
-            name: name,
-            yaml: template_response.yaml,
+        .save(SaveTemplateGrpcRequest {
+            product_id,
+            template_id,
+            yaml: template_response.content,
         })
         .await
         .unwrap();
@@ -179,12 +189,35 @@ pub async fn copy_template_to_other_env(
     Ok(())
 }
 
+#[post("/api/templates/get_yaml")]
+pub async fn load_yaml(
+    env_id: String,
+    product_id: String,
+    template_id: String,
+) -> Result<PopulatedYamlModelApiModel, ServerFnError> {
+    use crate::server::templates_grpc::*;
+    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
+
+    let response = ctx
+        .templates_grpc
+        .compile_yaml(CompileYamlGrpcRequest {
+            product_id,
+            template_id,
+        })
+        .await
+        .unwrap();
+
+    Ok(PopulatedYamlModelApiModel {
+        yaml: response.yaml,
+    })
+}
+
 #[cfg(feature = "server")]
-impl From<crate::server::templates_grpc::TemplateListItem> for TemplateHttpModel {
-    fn from(item: crate::server::templates_grpc::TemplateListItem) -> Self {
+impl From<crate::server::templates_grpc::TemplateListItemGrpcModel> for TemplateHttpModel {
+    fn from(item: crate::server::templates_grpc::TemplateListItemGrpcModel) -> Self {
         Self {
-            env: item.env,
-            name: item.name,
+            product_id: item.product_id,
+            template_id: item.template_id,
             created: match rust_extensions::date_time::DateTimeAsMicroseconds::from_str(
                 item.created.as_str(),
             ) {

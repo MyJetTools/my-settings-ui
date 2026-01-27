@@ -15,11 +15,13 @@ pub enum DialogState {
     },
     ShowSecret {
         env_id: Rc<String>,
-        secret: Rc<String>,
+        product_id: Option<Rc<String>>,
+        secret_id: Rc<String>,
     },
     EditSecret {
         env_id: Rc<String>,
-        name: Rc<String>,
+        product_id: Option<Rc<String>>,
+        secret_id: Rc<String>,
         on_ok: EventHandler<EditSecretResult>,
     },
 
@@ -30,16 +32,17 @@ pub enum DialogState {
     },
     ShowPopulatedYaml {
         env_id: Rc<String>,
-        env: Rc<String>,
-        name: Rc<String>,
+        product_id: Rc<String>,
+        template_id: Rc<String>,
     },
     SecretUsage {
         env_id: Rc<String>,
-        secret: Rc<String>,
+        product_id: Option<Rc<String>>,
+        secret_id: Rc<String>,
     },
     SecretUsageBySecret {
         env_id: Rc<String>,
-        secret: Rc<String>,
+        secret_id: Rc<String>,
     },
     SnapshotToExport(Rc<String>),
 

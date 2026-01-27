@@ -3,53 +3,37 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 use dioxus_utils::{console_log, DataState, RenderState};
-use serde::*;
 
-use crate::icons::*;
+use crate::models::*;
 
 use super::*;
 
 #[component]
-pub fn ShowSecretUsageByTemplate(env_id: Rc<String>, secret: Rc<String>) -> Element {
-    console_log(format!("Secret Usage: {}", secret).as_str());
+pub fn ShowSecretUsageByTemplate(
+    env_id: Rc<String>,
+    product_id: Option<Rc<String>>,
+    secret_id: Rc<String>,
+) -> Element {
+    console_log(format!("Secret Usage: {}", secret_id.as_str()).as_str());
 
-    let mut component_state = use_signal(|| ShowSecretUsageByTemplateState::new());
+    let cs = use_signal(|| ShowSecretUsageByTemplateState::new());
 
-    let component_state_read_access = component_state.read();
+    let cs_ra = cs.read();
 
-    let data = match component_state_read_access.data.as_ref() {
-        RenderState::None => {
-            let secret_id = secret.to_string();
-            spawn(async move {
-                match load_secret_usage(env_id.to_string(), secret_id).await {
-                    Ok(result) => {
-                        component_state.write().data.set_loaded(result);
-                    }
-                    Err(err) => {
-                        component_state.write().data.set_error(err.to_string());
-                    }
-                }
-            });
-            return rsx! {
-                div {}
-            };
-        }
-        RenderState::Loading => {
-            return rsx! {
-                LoadingIcon {}
-            }
-        }
-        RenderState::Loaded(data) => data,
-        RenderState::Error(err) => {
-            return rsx! {
-                div { {err.as_str()} }
-            }
-        }
+    let data = match get_data(
+        cs,
+        &cs_ra,
+        env_id.clone(),
+        product_id.clone(),
+        secret_id.clone(),
+    ) {
+        Ok(data) => data,
+        Err(err) => return err,
     };
 
     let content = data.into_iter().map(|itm| {
         let items = itm.yaml.split("\n").map(|itm| {
-            if itm.contains(secret.as_str()) {
+            if itm.contains(secret_id.as_str()) {
                 rsx! {
                     div { style: "color:black;", {itm} }
                 }
@@ -61,7 +45,7 @@ pub fn ShowSecretUsageByTemplate(env_id: Rc<String>, secret: Rc<String>) -> Elem
         });
 
         rsx! {
-            h4 { "{itm.env}/{itm.name}" }
+            h4 { "{itm.product_id}/{itm.template_id}" }
             {items}
             hr {}
         }
@@ -69,11 +53,49 @@ pub fn ShowSecretUsageByTemplate(env_id: Rc<String>, secret: Rc<String>) -> Elem
 
     rsx! {
         DialogTemplate {
-            header: "Usage of secret {secret.as_str()}",
+            header: "Usage of secret {secret_id.as_str()}",
             width: "95%",
             content: rsx! {
                 div { style: "text-align:left", class: "dialog-max-content", {content} }
             },
+        }
+    }
+}
+
+fn get_data<'s>(
+    mut cs: Signal<ShowSecretUsageByTemplateState>,
+    cs_ra: &'s ShowSecretUsageByTemplateState,
+    env_id: Rc<String>,
+    product_id: Option<Rc<String>>,
+    secret_id: Rc<String>,
+) -> Result<&'s [TemplateUsageApiModel], Element> {
+    match cs_ra.data.as_ref() {
+        RenderState::None => {
+            let env_id = env_id.to_string();
+            let secret_id = secret_id.to_string();
+            let product_id = product_id.map(|itm| itm.to_string());
+            spawn(async move {
+                match crate::api::secrets::load_secret_usage_by_templates(
+                    env_id, product_id, secret_id,
+                )
+                .await
+                {
+                    Ok(result) => {
+                        cs.write().data.set_loaded(result);
+                    }
+                    Err(err) => {
+                        cs.write().data.set_error(err.to_string());
+                    }
+                }
+            });
+            return Err(crate::icons::loading_icon());
+        }
+        RenderState::Loading => {
+            return Err(crate::icons::loading_icon());
+        }
+        RenderState::Loaded(data) => return Ok(data.as_slice()),
+        RenderState::Error(err) => {
+            return Err(crate::icons::render_error(err));
         }
     }
 }
@@ -88,38 +110,4 @@ impl ShowSecretUsageByTemplateState {
             data: DataState::new(),
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct TemplateUsageApiModel {
-    pub env: String,
-    pub name: String,
-    pub yaml: String,
-}
-
-#[server]
-async fn load_secret_usage(
-    env_id: String,
-    secret_id: String,
-) -> Result<Vec<TemplateUsageApiModel>, ServerFnError> {
-    use crate::server::secrets_grpc::*;
-    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
-
-    let response = ctx
-        .secrets_grpc
-        .get_templates_usage(GetTemplatesUsageRequest { name: secret_id })
-        .await
-        .unwrap();
-
-    let result: Vec<TemplateUsageApiModel> = response
-        .templates
-        .into_iter()
-        .map(|itm| TemplateUsageApiModel {
-            env: itm.env,
-            name: itm.name,
-            yaml: itm.yaml,
-        })
-        .collect();
-
-    Ok(result)
 }

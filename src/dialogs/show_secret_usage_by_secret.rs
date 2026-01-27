@@ -3,12 +3,15 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 use dioxus_utils::{DataState, RenderState};
-use serde::*;
 
-use crate::{dialogs::*, icons::*};
+use crate::{dialogs::*, models::*};
 
 #[component]
-pub fn ShowSecretUsageBySecret(env_id: Rc<String>, secret: Rc<String>) -> Element {
+pub fn ShowSecretUsageBySecret(
+    env_id: Rc<String>,
+    product_id: Option<String>,
+    secret_id: Rc<String>,
+) -> Element {
     let mut component_state = use_signal(|| ShowSecretUsageBySecretState::new());
 
     let component_state_read_state = component_state.read();
@@ -16,9 +19,16 @@ pub fn ShowSecretUsageBySecret(env_id: Rc<String>, secret: Rc<String>) -> Elemen
     let values = match component_state_read_state.data.as_ref() {
         RenderState::None => {
             let env_id = env_id.clone();
-            let secret_id = secret.to_string();
+            let product_id = product_id.clone();
+            let secret_id = secret_id.to_string();
             spawn(async move {
-                match load_secret_usage_by_secret(env_id.to_string(), secret_id).await {
+                match crate::api::secrets::load_secret_usage_by_secret(
+                    env_id.to_string(),
+                    product_id.map(|itm| itm.to_string()),
+                    secret_id,
+                )
+                .await
+                {
                     Ok(result) => {
                         component_state.write().data.set_loaded(result);
                     }
@@ -27,34 +37,28 @@ pub fn ShowSecretUsageBySecret(env_id: Rc<String>, secret: Rc<String>) -> Elemen
                     }
                 }
             });
-            return rsx! {
-                div {}
-            };
+            return crate::icons::loading_icon();
         }
         RenderState::Loading => {
-            return rsx! {
-                LoadingIcon {}
-            }
+            return crate::icons::loading_icon();
         }
         RenderState::Loaded(data) => data,
         RenderState::Error(err) => {
-            return rsx! {
-                div { {err.as_str()} }
-            }
+            return crate::icons::render_error(err);
         }
     };
 
     let to_render = values.into_iter().map(|itm| {
-        let index = itm.value.find(secret.as_str());
+        let index = itm.value.find(secret_id.as_str());
 
         match index {
             Some(index) => {
                 let left = &itm.value[..index];
-                let mid = &secret;
+                let mid = &secret_id;
                 let right = &itm.value[index + mid.len()..];
                 rsx! {
                     tr {
-                        td { "{itm.name}:" }
+                        td { "{itm.secret_id}:" }
                         td {
                             div { style: "color:gray; padding-left:5px",
                                 "{left}"
@@ -69,7 +73,7 @@ pub fn ShowSecretUsageBySecret(env_id: Rc<String>, secret: Rc<String>) -> Elemen
                 rsx! {
                     tr {
 
-                        td { "{itm.name}:" }
+                        td { "{itm.secret_id}:" }
                         td {
                             div { style: "color:gray; padding-left:5px", " {itm.value}" }
                         }
@@ -82,7 +86,7 @@ pub fn ShowSecretUsageBySecret(env_id: Rc<String>, secret: Rc<String>) -> Elemen
     rsx! {
 
         DialogTemplate {
-            header: format!("Usage of secret {}", secret.as_str()),
+            header: format!("Usage of secret {}", secret_id.as_str()),
             width: "95%",
             content: rsx! {
                 div { style: "text-align:left", class: "dialog-max-content", {to_render} }
@@ -101,36 +105,4 @@ impl ShowSecretUsageBySecretState {
             data: DataState::new(),
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct SecretUsageBySecretApiModel {
-    pub name: String,
-    pub value: String,
-}
-
-#[server]
-async fn load_secret_usage_by_secret(
-    env_id: String,
-    secret_id: String,
-) -> Result<Vec<SecretUsageBySecretApiModel>, ServerFnError> {
-    use crate::server::secrets_grpc::*;
-    let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
-
-    let response = ctx
-        .secrets_grpc
-        .get_secrets_usage(GetSecretsUsageRequest { name: secret_id })
-        .await
-        .unwrap();
-
-    let result: Vec<_> = response
-        .secrets
-        .into_iter()
-        .map(|itm| SecretUsageBySecretApiModel {
-            name: itm.name,
-            value: itm.value,
-        })
-        .collect();
-
-    Ok(result)
 }

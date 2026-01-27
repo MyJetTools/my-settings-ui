@@ -20,6 +20,6 @@ impl FilterTemplate {
             return true;
         }
 
-        itm.name.to_lowercase().contains(self.0.as_str())
+        itm.template_id.to_lowercase().contains(self.0.as_str())
     }
 }

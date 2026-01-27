@@ -3,57 +3,30 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 use dioxus_utils::*;
 
-use crate::{icons::*, models::*};
+use crate::models::*;
 
 use super::*;
-use crate::dialogs::*;
 
 #[component]
-pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> Element {
-    let mut component_state = use_signal(|| ChooseSecretState::new());
+pub fn ChooseSecret(
+    env_id: Rc<String>,
+    product_id: String,
+    on_selected: EventHandler<String>,
+) -> Element {
+    let mut cs = use_signal(|| ChooseSecretState::new());
 
-    let component_state_read_access = component_state.read();
+    let cs_ra = cs.read();
 
-    let content = match component_state_read_access.mode {
+    let content = match cs_ra.mode {
         ChooseSecretMode::Select => {
-            let secrets = match component_state_read_access.secrets.as_ref() {
-                RenderState::None => {
-                    let env_id = env_id.clone();
-                    spawn(async move {
-                        component_state.write().secrets.set_loading();
-                        match crate::api::secrets::load_secrets(env_id.to_string()).await {
-                            Ok(secrets) => {
-                                component_state
-                                    .write()
-                                    .secrets
-                                    .set_loaded(secrets.into_iter().map(Rc::new).collect());
-                            }
-                            Err(err) => {
-                                component_state.write().secrets.set_error(err.to_string());
-                            }
-                        }
-                    });
-
-                    return rsx! {
-                        LoadingIcon {}
-                    };
-                }
-                RenderState::Loading => {
-                    return rsx! {
-                        LoadingIcon {}
-                    }
-                }
-                RenderState::Loaded(secrets) => secrets,
-                RenderState::Error(err) => {
-                    return rsx! {
-                        div { {err.as_str()} }
-                    }
-                }
+            let secrets = match get_data(cs, &cs_ra, &env_id, product_id.as_str()) {
+                Ok(data) => data,
+                Err(err) => return err,
             };
 
             let result = secrets
                 .into_iter()
-                .filter(|item| component_state_read_access.filter_it(item))
+                .filter(|item| cs_ra.filter_it(item))
                 .map(|value| {
                     let value = value.clone();
                     rsx! {
@@ -61,11 +34,11 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                             button {
                                 class: "btn btn-sm btn-primary",
                                 onclick: move |_| {
-                                    on_selected.call(value.name.to_string());
+                                    on_selected.call(value.secret_id.to_string());
                                 },
                                 "Copy"
                             }
-                            "{value.name}"
+                            "{value.secret_id}"
                         }
                     }
                 });
@@ -75,19 +48,26 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
             }
         }
         ChooseSecretMode::Add => {
-            let btn = if component_state_read_access.has_secret() {
+            let product_id_to_add = product_id.clone();
+            let btn = if cs_ra.has_secret() {
                 rsx! {
                     div { class: "alert alert-danger", "Secret already exists" }
                 }
             } else {
                 let env_id_add_new_secret = env_id.clone();
+                let product_id_new_secret = product_id.to_string();
                 rsx! {
                     button {
                         class: "btn btn-primary",
                         onclick: move |_| {
                             let env_id = env_id_add_new_secret.clone();
-                            let (secret_name, secret_value, secret_level) = {
-                                let component_state_read_access = component_state.read();
+                            let product_id = if product_id_new_secret.len() == 0 {
+                                None
+                            } else {
+                                Some(product_id_new_secret.to_string())
+                            };
+                            let (secret_id, secret_value, secret_level) = {
+                                let component_state_read_access = cs.read();
                                 (
                                     component_state_read_access.secret_name.clone(),
                                     component_state_read_access.secret_value.clone(),
@@ -97,7 +77,8 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                             spawn(async move {
                                 crate::api::secrets::save_secret(
                                         env_id.to_string(),
-                                        secret_name,
+                                        product_id,
+                                        secret_id,
                                         secret_value,
                                         secret_level,
                                     )
@@ -113,9 +94,9 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                 div { style: "margin-top:10px", class: "form-floating mb-3",
                     input {
                         class: "form-control",
-                        value: component_state_read_access.secret_value.as_str(),
+                        value: cs_ra.secret_value.as_str(),
                         oninput: move |cx| {
-                            component_state.write().secret_value = cx.value();
+                            cs.write().secret_value = cx.value();
                         },
                     }
                     label { "Secret value" }
@@ -124,9 +105,9 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                     input {
                         class: "form-control",
                         r#type: "number",
-                        value: component_state_read_access.secret_level.as_str(),
+                        value: cs_ra.secret_level.as_str(),
                         oninput: move |cx| {
-                            component_state.write().secret_level = cx.value();
+                            cs.write().secret_level = cx.value();
                         },
                     }
                     label { "Secret level" }
@@ -136,11 +117,25 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                 h4 { "Copy value from other secret" }
                 SelectSecret {
                     env_id: env_id.clone(),
+                    product_id: product_id.as_str(),
                     on_selected: move |value: String| {
                         let env_id = env_id.clone();
+
+                        let product_id = if product_id_to_add.len() == 0 {
+                            None
+                        } else {
+                            Some(product_id_to_add.clone())
+                        };
+                        let value = value.to_string();
                         spawn(async move {
-                            let result = load_secret(env_id.to_string(), value).await.unwrap();
-                            component_state.write().secret_value = result.value;
+                            let result = crate::api::secrets::load_secret(
+                                    env_id.to_string(),
+                                    product_id,
+                                    value,
+                                )
+                                .await
+                                .unwrap();
+                            cs.write().secret_value = result.value;
                         });
                     },
                 }
@@ -148,14 +143,14 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
         }
     };
 
-    let btn = match component_state_read_access.mode {
+    let btn = match cs_ra.mode {
         ChooseSecretMode::Select => {
             rsx! {
                 button {
                     class: "btn btn-outline-secondary",
                     style: "width:150px",
                     onclick: move |_| {
-                        component_state.write().mode = ChooseSecretMode::Add;
+                        cs.write().mode = ChooseSecretMode::Add;
                     },
                     "Select secret"
                 }
@@ -167,7 +162,7 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                     class: "btn btn-outline-secondary",
                     style: "width:150px",
                     onclick: move |_| {
-                        component_state.write().mode = ChooseSecretMode::Select;
+                        cs.write().mode = ChooseSecretMode::Select;
                     },
                     "Add secret"
                 }
@@ -175,7 +170,7 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
         }
     };
 
-    let text = match component_state_read_access.mode {
+    let text = match cs_ra.mode {
         ChooseSecretMode::Select => "Search secret",
         ChooseSecretMode::Add => "Add secret",
     };
@@ -186,7 +181,7 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
                 class: "form-control",
                 placeholder: text,
                 oninput: move |cx| {
-                    let mut write_access = component_state.write();
+                    let mut write_access = cs.write();
                     write_access.secret_name = cx.value();
                     write_access.filter = write_access.secret_name.to_lowercase();
                 },
@@ -195,6 +190,48 @@ pub fn ChooseSecret(env_id: Rc<String>, on_selected: EventHandler<String>) -> El
         }
         div { style: "height:65vh; overflow-y: auto; text-align: left", {content.into_iter()} }
     }
+}
+
+fn get_data<'s>(
+    mut cs: Signal<ChooseSecretState>,
+    cs_ra: &'s ChooseSecretState,
+    env_id: &str,
+    product_id: &str,
+) -> Result<&'s [Rc<SecretHttpModel>], Element> {
+    match cs_ra.secrets.as_ref() {
+        RenderState::None => {
+            let env_id = env_id.to_string();
+            let product_id = if product_id.len() == 0 {
+                None
+            } else {
+                Some(product_id.to_string())
+            };
+            spawn(async move {
+                cs.write().secrets.set_loading();
+                match crate::api::secrets::load_secrets(env_id, product_id).await {
+                    Ok(secrets) => {
+                        cs.write()
+                            .secrets
+                            .set_loaded(secrets.into_iter().map(Rc::new).collect());
+                    }
+                    Err(err) => {
+                        cs.write().secrets.set_error(err.to_string());
+                    }
+                }
+            });
+
+            return Err(crate::icons::loading_icon());
+        }
+        RenderState::Loading => {
+            return Err(crate::icons::loading_icon());
+        }
+        RenderState::Loaded(secrets) => {
+            return Ok(secrets.as_slice());
+        }
+        RenderState::Error(err) => {
+            return Err(crate::icons::render_error(err));
+        }
+    };
 }
 
 pub struct ChooseSecretState {
@@ -222,7 +259,7 @@ impl ChooseSecretState {
         if self.filter.len() < 3 {
             return false;
         }
-        item.name.to_lowercase().contains(self.filter.as_str())
+        item.secret_id.to_lowercase().contains(self.filter.as_str())
     }
 
     pub fn get_secret_level(&self) -> i32 {
@@ -234,7 +271,7 @@ impl ChooseSecretState {
 
         for value in secrets {
             if rust_extensions::str_utils::compare_strings_case_insensitive(
-                value.name.as_str(),
+                value.secret_id.as_str(),
                 &self.secret_name,
             ) {
                 return true;

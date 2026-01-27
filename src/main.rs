@@ -21,7 +21,7 @@ mod server;
 #[cfg(feature = "server")]
 use dioxus::server::*;
 
-use crate::{icons::*, states::*};
+use crate::states::*;
 
 #[derive(Routable, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum AppRoute {
@@ -113,10 +113,11 @@ fn MyLayout() -> Element {
         }
 
         RenderState::Loading => {
+            let loading_icon = crate::icons::loading_icon();
             return {
                 rsx! {
                     div { "Loading envs..." }
-                    LoadingIcon {}
+                    {loading_icon}
                 }
             };
         }

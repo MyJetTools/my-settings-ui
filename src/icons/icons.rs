@@ -62,9 +62,15 @@ pub fn TableUpIcon() -> Element {
     }
 }
 
-#[component]
-pub fn LoadingIcon() -> Element {
+pub fn loading_icon() -> Element {
     rsx! {
         span { class: "loader" }
+    }
+}
+
+pub fn render_error(err: &str) -> Element {
+    rsx! {
+        div { {err} }
+
     }
 }

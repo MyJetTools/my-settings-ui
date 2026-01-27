@@ -8,8 +8,8 @@ pub struct TemplatesState {
 }
 
 impl TemplatesState {
-    pub fn is_selected(&self, env: &str, template_id: &str) -> bool {
-        let id = generate_id(env, template_id);
+    pub fn is_selected(&self, product_id: &str, template_id: &str) -> bool {
+        let id = generate_id(product_id, template_id);
 
         self.selected.contains_key(id.as_str())
     }
@@ -34,8 +34,8 @@ impl TemplatesState {
 
         for itm in self.selected.values() {
             result.push(crate::models::DownloadFileRequestModel {
-                env: itm.0.to_string(),
-                name: itm.1.to_string(),
+                product_id: itm.0.to_string(),
+                template_id: itm.1.to_string(),
             });
         }
 
