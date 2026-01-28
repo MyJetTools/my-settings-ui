@@ -5,14 +5,17 @@ use crate::models::*;
 #[get("/api/secrets/load?env_id&product_id")]
 pub async fn load_secrets(
     env_id: String,
-    product_id: Option<String>,
+    product_id: String,
 ) -> Result<Vec<SecretHttpModel>, ServerFnError> {
     use crate::server::secrets_grpc::*;
     let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
 
     let result: Vec<SecretHttpModel> = ctx
         .secrets_grpc
-        .get_all(GetAllSecretsGrpcRequest { product_id })
+        .get_all(GetAllSecretsGrpcRequest {
+            product_id,
+            include_shared: true,
+        })
         .await
         .unwrap()
         .into_vec()
@@ -25,20 +28,17 @@ pub async fn load_secrets(
 #[post("/api/secrets/save")]
 pub async fn save_secret(
     env_id: String,
-    product_id: Option<String>,
-    secret_id: String,
-    value: String,
-    level: i32,
+    value: UpdateSecretValueHttpModel,
 ) -> Result<(), ServerFnError> {
     use crate::server::secrets_grpc::*;
     let ctx = crate::server::APP_CTX.get_app_ctx(env_id.as_str()).await;
 
     ctx.secrets_grpc
         .save(SaveSecretGrpcRequest {
-            product_id,
-            id: secret_id,
-            value,
-            level,
+            product_id: value.product_id,
+            id: value.secret_id,
+            value: value.value,
+            level: value.level,
         })
         .await
         .unwrap();
@@ -226,6 +226,7 @@ pub async fn load_secret_usage_by_templates(
 impl From<crate::server::secrets_grpc::SecretGrpcModel> for SecretHttpModel {
     fn from(item: crate::server::secrets_grpc::SecretGrpcModel) -> Self {
         SecretHttpModel {
+            product_id: item.product_id,
             secret_id: item.secret_id,
             level: item.level,
             created: rust_extensions::date_time::DateTimeAsMicroseconds::from_str(

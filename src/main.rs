@@ -5,6 +5,7 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 mod api;
+mod components;
 mod dialogs;
 mod icons;
 mod models;
@@ -79,60 +80,15 @@ fn MyLayout() -> Element {
     use_context_provider(|| Signal::new(FilterSecret::new()));
     use_context_provider(|| Signal::new(FilterTemplate::new()));
 
-    let mut main_state = consume_context::<Signal<MainState>>();
+    let ms = consume_context::<Signal<MainState>>();
 
-    let main_state_read_access = main_state.read();
+    let ms_ra = ms.read();
 
-    match main_state_read_access.envs.as_ref() {
-        RenderState::None => {
-            spawn(async move {
-                match get_envs().await {
-                    Ok(resp) => {
-                        let mut write_access = main_state.write();
-
-                        if resp.envs.is_empty() {
-                            write_access
-                                .envs
-                                .set_error("Unauthorized access".to_string());
-                            return;
-                        }
-
-                        write_access.set_envs(resp.envs.into_iter().map(Rc::new).collect());
-
-                        write_access.user = resp.name;
-                        write_access.prompt_ssh_key = Some(resp.prompt_ssh_pass_key);
-                    }
-                    Err(err) => {
-                        main_state.write().envs.set_error(err.to_string());
-                    }
-                }
-            });
-            return rsx! {
-                div { "Loading envs..." }
-            };
-        }
-
-        RenderState::Loading => {
-            let loading_icon = crate::icons::loading_icon();
-            return {
-                rsx! {
-                    div { "Loading envs..." }
-                    {loading_icon}
-                }
-            };
-        }
-        RenderState::Loaded(_) => {}
-
-        RenderState::Error(err) => {
-            return {
-                rsx! {
-                    div { {err.as_str()} }
-                }
-            }
-        }
+    if let Err(err) = init_envs(ms, &ms_ra) {
+        return err;
     }
 
-    if main_state_read_access.prompt_ssh_key.unwrap_or(false) {
+    if ms_ra.prompt_ssh_key.unwrap_or(false) {
         return rsx! {
             PromptSshPassKey {}
         };
@@ -165,30 +121,69 @@ fn RenderToast() -> Element {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EnvsHttpResponse {
-    pub name: String,
-    pub envs: Vec<String>,
-    prompt_ssh_pass_key: bool,
-}
+fn init_envs(mut ms: Signal<MainState>, ms_ra: &MainState) -> Result<(), Element> {
+    match ms_ra.envs.as_ref() {
+        RenderState::None => {
+            spawn(async move {
+                let envs_resp = match crate::api::envs::get_envs().await {
+                    Ok(resp) => {
+                        if resp.envs.is_empty() {
+                            ms.write().envs.set_error("Unauthorized access".to_string());
+                            return;
+                        }
+                        resp
+                    }
+                    Err(err) => {
+                        ms.write().envs.set_error(err.to_string());
+                        return;
+                    }
+                };
 
-#[get("/api/envs", headers: dioxus::fullstack::HeaderMap)]
-pub async fn get_envs() -> Result<EnvsHttpResponse, ServerFnError> {
-    let user_id = {
-        if let Some(user) = headers.get("x-ssl-user") {
-            user.to_str().unwrap().to_string()
-        } else {
-            "".to_string()
+                let envs: Vec<_> = envs_resp.envs.into_iter().map(Rc::new).collect();
+                let selected_env = envs.first().unwrap().clone();
+
+                let templates =
+                    match crate::api::templates::get_templates(selected_env.to_string()).await {
+                        Ok(templates) => templates,
+                        Err(err) => {
+                            ms.write().envs.set_error(err.to_string());
+                            return;
+                        }
+                    };
+
+                let mut write_access = ms.write();
+                write_access.set_envs(envs, selected_env);
+                write_access.user = envs_resp.name;
+                write_access.prompt_ssh_key = Some(envs_resp.prompt_ssh_pass_key);
+                write_access.set_templates_as_loaded(templates);
+            });
+            let result = rsx! {
+                div { "Loading envs..." }
+            };
+
+            return Err(result);
         }
-    };
 
-    println!("Sending envs for user: [{}]", user_id);
+        RenderState::Loading => {
+            let loading_icon = crate::icons::loading_icon();
+            let result = {
+                rsx! {
+                    div { "Loading envs..." }
+                    {loading_icon}
+                }
+            };
 
-    let (envs, prompt_ssh_pass_key) = crate::server::APP_CTX.get_envs(&user_id).await;
+            return Err(result);
+        }
+        RenderState::Loaded(_) => return Ok(()),
 
-    Ok(EnvsHttpResponse {
-        name: user_id,
-        envs,
-        prompt_ssh_pass_key,
-    })
+        RenderState::Error(err) => {
+            let result = {
+                rsx! {
+                    div { {err.as_str()} }
+                }
+            };
+            return Err(result);
+        }
+    }
 }

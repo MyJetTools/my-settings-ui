@@ -2,6 +2,7 @@ use serde::*;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SecretHttpModel {
+    pub product_id: Option<String>,
     pub secret_id: String,
     pub level: i32,
     pub created: i64,
@@ -12,6 +13,14 @@ pub struct SecretHttpModel {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct SecretValueApiModel {
+    pub value: String,
+    pub level: i32,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UpdateSecretValueHttpModel {
+    pub product_id: Option<String>,
+    pub secret_id: String,
     pub value: String,
     pub level: i32,
 }

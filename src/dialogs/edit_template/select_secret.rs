@@ -18,11 +18,7 @@ pub fn SelectSecret(
     let secrets = match component_state_read_access.secrets.as_ref() {
         RenderState::None => {
             let env_id = env_id.to_string();
-            let product_id = if product_id.len() == 0 {
-                None
-            } else {
-                Some(product_id.to_string())
-            };
+            let product_id = product_id.to_string();
             spawn(async move {
                 component_state.write().secrets.set_loading();
                 match crate::api::secrets::load_secrets(env_id, product_id).await {

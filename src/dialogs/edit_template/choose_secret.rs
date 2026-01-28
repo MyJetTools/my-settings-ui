@@ -75,15 +75,13 @@ pub fn ChooseSecret(
                                 )
                             };
                             spawn(async move {
-                                crate::api::secrets::save_secret(
-                                        env_id.to_string(),
-                                        product_id,
-                                        secret_id,
-                                        secret_value,
-                                        secret_level,
-                                    )
-                                    .await
-                                    .unwrap();
+                                let value = UpdateSecretValueHttpModel {
+                                    product_id,
+                                    secret_id,
+                                    value: secret_value,
+                                    level: secret_level,
+                                };
+                                crate::api::secrets::save_secret(env_id.to_string(), value).await.unwrap();
                             });
                         },
                         "Add new secret"
@@ -201,11 +199,8 @@ fn get_data<'s>(
     match cs_ra.secrets.as_ref() {
         RenderState::None => {
             let env_id = env_id.to_string();
-            let product_id = if product_id.len() == 0 {
-                None
-            } else {
-                Some(product_id.to_string())
-            };
+            let product_id = product_id.to_string();
+
             spawn(async move {
                 cs.write().secrets.set_loading();
                 match crate::api::secrets::load_secrets(env_id, product_id).await {

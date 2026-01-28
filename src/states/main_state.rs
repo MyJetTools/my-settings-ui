@@ -1,6 +1,6 @@
-use std::rc::Rc;
+use std::{collections::BTreeSet, rc::Rc};
 
-use dioxus_utils::DataState;
+use dioxus_utils::*;
 
 use crate::{models::*, storage::*};
 
@@ -31,11 +31,11 @@ pub struct MainState {
     pub envs: DataState<Vec<Rc<String>>>,
     pub user: String,
     current_env_id: Rc<String>,
-    selected_product_id: Option<Rc<String>>,
     pub location: LocationState,
     pub templates: DataState<Vec<Rc<TemplateHttpModel>>>,
     pub secrets: DataState<Vec<SecretHttpModel>>,
     pub prompt_ssh_key: Option<bool>,
+    pub products: BTreeSet<String>,
 }
 
 impl MainState {
@@ -44,26 +44,23 @@ impl MainState {
             .get(ENV_LOCAL_STORAGE_KEY)
             .unwrap_or_default();
 
-        let selected_product_id = dioxus_utils::js::GlobalAppSettings::get_local_storage()
-            .get(PRODUCT_ID_LOCAL_STORAGE_KEY);
-
         Self {
             envs: DataState::default(),
             location,
             templates: DataState::default(),
             secrets: DataState::default(),
             current_env_id: Rc::new(current_env_id),
-            selected_product_id: selected_product_id.map(Rc::new),
             user: "".to_string(),
             prompt_ssh_key: None,
+            products: Default::default(),
         }
     }
 
-    pub fn set_envs(&mut self, envs: Vec<Rc<String>>) {
+    pub fn set_envs(&mut self, envs: Vec<Rc<String>>, selected_env: Rc<String>) {
         let has_env = envs.iter().any(|env| env == &self.current_env_id);
 
         if !has_env {
-            self.current_env_id = envs.first().unwrap().clone();
+            self.current_env_id = selected_env;
             dioxus_utils::js::GlobalAppSettings::get_local_storage()
                 .set(ENV_LOCAL_STORAGE_KEY, &self.current_env_id);
         }
@@ -73,10 +70,6 @@ impl MainState {
 
     pub fn get_selected_env(&self) -> Rc<String> {
         self.current_env_id.clone()
-    }
-
-    pub fn get_selected_product_id(&self) -> Option<Rc<String>> {
-        self.selected_product_id.clone()
     }
 
     pub fn set_location(&mut self, location: LocationState) {
@@ -93,5 +86,18 @@ impl MainState {
     pub fn drop_data(&mut self) {
         self.templates.reset();
         self.secrets.reset();
+    }
+
+    pub fn set_templates_as_loaded(&mut self, templates: Vec<TemplateHttpModel>) {
+        self.products.clear();
+
+        for template in templates.iter() {
+            if !self.products.contains(template.product_id.as_str()) {
+                self.products.insert(template.product_id.to_string());
+            }
+        }
+
+        self.templates
+            .set_loaded(templates.into_iter().map(Rc::new).collect());
     }
 }

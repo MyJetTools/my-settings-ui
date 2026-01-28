@@ -5,17 +5,21 @@ use dioxus::prelude::*;
 use dioxus_utils::*;
 
 use crate::icons::*;
+use crate::models::*;
+use crate::states::MainState;
 
-use super::*;
+use super::super::*;
+
+use super::state::*;
 
 #[component]
 pub fn EditSecret(
     env_id: Rc<String>,
     product_id: Option<Rc<String>>,
     secret_id: Rc<String>,
-    on_ok: EventHandler<EditSecretResult>,
+    on_ok: EventHandler<UpdateSecretValueHttpModel>,
 ) -> Element {
-    let mut cs = use_signal(|| EditSecretState::new(secret_id.to_string()));
+    let mut cs = use_signal(|| EditSecretState::new(secret_id.to_string(), &product_id));
     let cs_ra = cs.read();
 
     match get_data(cs, &cs_ra, &env_id, &product_id, &secret_id) {
@@ -23,16 +27,34 @@ pub fn EditSecret(
         Err(err) => return err,
     };
 
+    let ms = consume_context::<Signal<MainState>>();
+    let ms_ra = ms.read();
+
+    let product_select = crate::components::select_product(
+        &ms_ra,
+        Some("Shared"),
+        cs_ra.product_id.as_deref(),
+        !cs_ra.new_secret,
+        EventHandler::new(move |value| {
+            cs.write().product_id = value;
+        }),
+    );
+
     let content = rsx! {
+
+        div { class: "form-floating mb-3",
+            {product_select}
+            label { "Product scope" }
+        }
 
         div { class: "form-floating mb-3",
             input {
                 class: "form-control",
                 disabled: !cs_ra.new_secret,
                 oninput: move |cx| {
-                    cs.write().name = cx.value();
+                    cs.write().secret_id = cx.value();
                 },
-                value: cs_ra.name.as_str(),
+                value: cs_ra.secret_id.as_str(),
             }
             label { "Secret name" }
         }
@@ -126,85 +148,5 @@ fn get_data(
         RenderState::Error(err) => {
             return Err(crate::icons::render_error(err));
         }
-    }
-}
-
-pub struct EditSecretResult {
-    pub secret_id: String,
-    pub value: String,
-    pub level: i32,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct SecretValue {
-    pub value: String,
-    pub level: String,
-}
-
-pub struct EditSecretState {
-    pub name: String,
-    pub value: SecretValue,
-    pub value_on_init: DataState<SecretValue>,
-    pub new_secret: bool,
-}
-
-impl EditSecretState {
-    pub fn new(name: String) -> Self {
-        let new_secret = name.len() == 0;
-
-        let value = SecretValue::default();
-
-        let value_on_init = if new_secret {
-            DataState::new_as_loaded(value.clone())
-        } else {
-            DataState::new()
-        };
-
-        return Self {
-            new_secret,
-            name,
-            value_on_init,
-            value,
-        };
-    }
-
-    pub fn init_value(&mut self, value: SecretValue) {
-        self.value = value.clone();
-        self.value_on_init.set_loaded(value);
-    }
-
-    pub fn can_be_saved(&self) -> bool {
-        if self.name.len() == 0 {
-            return false;
-        }
-
-        if self.value.value.len() == 0 {
-            return false;
-        }
-
-        let value_on_init = match self.value_on_init.as_ref() {
-            RenderState::Loaded(value) => value,
-            _ => {
-                return false;
-            }
-        };
-
-        if self.value.value == value_on_init.value && self.value.level == value_on_init.level {
-            return false;
-        }
-
-        true
-    }
-
-    pub fn get_result(&self) -> EditSecretResult {
-        EditSecretResult {
-            secret_id: self.name.clone(),
-            value: self.value.value.clone(),
-            level: self.value.level.parse().unwrap(),
-        }
-    }
-
-    pub fn save_button_is_disabled(&self) -> bool {
-        !self.can_be_saved()
     }
 }

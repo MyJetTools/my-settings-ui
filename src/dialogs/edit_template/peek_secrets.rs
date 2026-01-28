@@ -126,11 +126,7 @@ pub fn get_data<'s>(
     match cs_ra.loaded_secrets.as_ref() {
         RenderState::None => {
             let env_id = env_id.to_string();
-            let product_id = if product_id.len() == 0 {
-                None
-            } else {
-                Some(product_id.to_string())
-            };
+            let product_id = product_id.to_string();
             spawn(async move {
                 cs.write().loaded_secrets.set_loading();
                 match crate::api::secrets::load_secrets(env_id, product_id).await {

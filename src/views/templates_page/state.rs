@@ -2,9 +2,18 @@ use std::collections::HashMap;
 
 use rust_extensions::ShortString;
 
-#[derive(Default)]
 pub struct TemplatesState {
     pub selected: HashMap<String, (String, String)>,
+    pub product_id: Option<String>,
+}
+
+impl Default for TemplatesState {
+    fn default() -> Self {
+        Self {
+            selected: Default::default(),
+            product_id: crate::storage::last_used_product::get(),
+        }
+    }
 }
 
 impl TemplatesState {

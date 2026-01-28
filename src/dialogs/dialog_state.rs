@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use dioxus::prelude::EventHandler;
 
-use crate::{dialogs::*, models::UpdateTemplateHttpModel};
+use crate::models::*;
 
 use super::states::EditTemplateDialogData;
 
@@ -22,7 +22,7 @@ pub enum DialogState {
         env_id: Rc<String>,
         product_id: Option<Rc<String>>,
         secret_id: Rc<String>,
-        on_ok: EventHandler<EditSecretResult>,
+        on_ok: EventHandler<UpdateSecretValueHttpModel>,
     },
 
     EditTemplate {

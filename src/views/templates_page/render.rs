@@ -99,7 +99,7 @@ pub fn TemplatesPage() -> Element {
                                 env_id: env_id.clone(),
                                 data: EditTemplateDialogData::CopyFromOtherTemplate(template_to_copy),
                                 on_ok: EventHandler::new(move |result| {
-                                    exec_save_template(env_id.to_string(), result);
+                                    exec_save_template(cs, env_id.to_string(), result);
                                 }),
                             });
                     },
@@ -118,7 +118,7 @@ pub fn TemplatesPage() -> Element {
                                 env_id: env_id.clone(),
                                 data: EditTemplateDialogData::Edit(template_to_edit),
                                 on_ok: EventHandler::new(move |result| {
-                                    exec_save_template(env_id.to_string(), result);
+                                    exec_save_template(cs, env_id.to_string(), result);
                                 }),
                             });
                     },
@@ -250,7 +250,7 @@ pub fn TemplatesPage() -> Element {
                         env_id: env_id.clone(),
                         data: EditTemplateDialogData::New,
                         on_ok: EventHandler::new(move |result| {
-                            exec_save_template(env_id.to_string(), result);
+                            exec_save_template(cs, env_id.to_string(), result);
                         }),
                     });
             },
@@ -317,13 +317,26 @@ pub fn TemplatesPage() -> Element {
         }
     };
 
+    let select_product = crate::components::select_product(
+        &ms_ra,
+        None,
+        cs_ra.product_id.as_deref(),
+        false,
+        EventHandler::new(move |value| {
+            cs.write().product_id = value;
+        }),
+    );
+
     rsx! {
         table { class: "table table-striped", style: "text-align: left;",
             thead {
                 tr {
                     th {}
                     th { {export_btn} }
-                    th { "Env" }
+                    th {
+                        "Product"
+                        {select_product}
+                    }
                     th {}
                     th {
                         table {
@@ -359,12 +372,20 @@ pub fn TemplatesPage() -> Element {
     }
 }
 
-fn exec_save_template(env_id: String, data: UpdateTemplateHttpModel) {
+fn exec_save_template(
+    mut cs: Signal<TemplatesState>,
+    env_id: String,
+    data: UpdateTemplateHttpModel,
+) {
+    crate::storage::last_used_product::save(&data.product_id);
+
     spawn(async move {
+        let product_id = data.product_id.clone();
         match crate::api::templates::save_template(env_id, data).await {
             Ok(_) => {
                 consume_context::<Signal<DialogState>>().set(DialogState::None);
                 consume_context::<Signal<MainState>>().write().drop_data();
+                cs.write().product_id = Some(product_id);
                 crate::ui_utils::show_toast("Template is saved", ToastType::Info);
             }
             Err(_) => {
@@ -420,9 +441,7 @@ fn get_data<'s>(
                 ms.write().templates.set_loading();
                 match crate::api::templates::get_templates(env_id_request.to_string()).await {
                     Ok(templates) => {
-                        ms.write()
-                            .templates
-                            .set_loaded(templates.into_iter().map(Rc::new).collect());
+                        ms.write().set_templates_as_loaded(templates);
                     }
                     Err(err) => {
                         ms.write().templates.set_error(err.to_string());

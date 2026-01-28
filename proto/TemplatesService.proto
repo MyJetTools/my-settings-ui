@@ -45,6 +45,12 @@ message ServerInfoResponse{
   string env_name = 1;
 }
 
+
+message GetProductsGrpcResponse{
+  repeated string products =1;
+}
+
+
 service Templates {
   rpc GetServerInfo(google.protobuf.Empty) returns (ServerInfoResponse);
   rpc GetTemplateContent(GetTemplateContentGrpcRequest) returns (GetTemplateContentGrpcResponse);
@@ -53,5 +59,7 @@ service Templates {
   rpc Save(SaveTemplateGrpcRequest) returns (google.protobuf.Empty);
   rpc CompileYaml(CompileYamlGrpcRequest) returns (CompileYamlGrpcResponse);
   rpc Delete(DeleteTemplateGrpcRequest) returns (google.protobuf.Empty);
+
+  rpc GetProducts(google.protobuf.Empty) returns (GetProductsGrpcResponse);
   rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
 }

@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, rc::Rc};
+use std::rc::Rc;
 
 use dioxus::prelude::*;
 
@@ -6,68 +6,36 @@ use dioxus_utils::*;
 
 use crate::{dialogs::*, icons::*, models::*, states::*, ui_utils::ToastType};
 
-#[derive(Debug, Clone, Copy)]
-pub enum OrderBy {
-    Name,
-    Updated,
-}
+use super::state::*;
 
 #[component]
 pub fn SecretsPage() -> Element {
-    let mut main_state = consume_context::<Signal<MainState>>();
+    let ms = consume_context::<Signal<MainState>>();
 
-    let main_state_read_access = main_state.read();
+    let ms_ra = ms.read();
 
-    let selected_env_id = main_state_read_access.get_selected_env();
+    let selected_env_id = ms_ra.get_selected_env();
 
-    let selected_product_id = main_state_read_access.get_selected_product_id();
+    let mut cs = use_signal(|| SecretsListState::new(&ms_ra));
 
-    let mut component_state = use_signal(|| SecretsListState::new());
-
-    let component_state_read_access = component_state.read();
+    let cs_ra = cs.read();
 
     let mut filter_secret = consume_context::<Signal<FilterSecret>>();
 
     let filter_secret_read_access = filter_secret.read();
 
-    let secrets = match main_state_read_access.secrets.as_ref() {
-        RenderState::None => {
-            let env_id = selected_env_id.clone();
-
-            let product_id = selected_product_id.clone();
-
-            spawn(async move {
-                main_state.write().secrets.set_loading();
-                match crate::api::secrets::load_secrets(
-                    env_id.to_string(),
-                    product_id.map(|itm| itm.to_string()),
-                )
-                .await
-                {
-                    Ok(value) => {
-                        main_state.write().secrets.set_value(value);
-                    }
-                    Err(err) => {
-                        main_state.write().secrets.set_error(err.to_string());
-                    }
-                }
-            });
-            return crate::icons::loading_icon();
-        }
-        RenderState::Loading => {
-            return crate::icons::loading_icon();
-        }
-        RenderState::Loaded(value) => value,
-        RenderState::Error(err) => {
-            return crate::icons::render_error(err);
+    let secrets = match get_data(ms, &ms_ra, selected_env_id.as_str(), &cs_ra.product_id) {
+        Ok(secrets) => secrets,
+        Err(err) => {
+            return err;
         }
     };
 
-    let last_edited = get_last_edited(&secrets);
+    let last_edited = get_last_edited(secrets);
 
-    let sorted = component_state_read_access.sort(secrets.iter());
+    let sorted = cs_ra.sort(secrets.iter());
 
-    let (name_up, updated_up) = match component_state_read_access.order_by {
+    let (name_up, updated_up) = match cs_ra.order_by {
         OrderBy::Name => ("▲", ""),
         OrderBy::Updated => ("", "▲"),
     };
@@ -77,6 +45,8 @@ pub fn SecretsPage() -> Element {
         .filter(|itm| filter_secret_read_access.filter(&itm.1))
         .map(|(_, itm)| {
             let secret_id = Rc::new(itm.secret_id.to_string());
+
+            let item_product_id = itm.product_id.clone().map(Rc::new);
 
             let secret3 = secret_id.clone();
             let edit_button_secret_name = secret_id.clone();
@@ -124,7 +94,7 @@ pub fn SecretsPage() -> Element {
             let updated = crate::utils::unix_microseconds_to_string(itm.updated);
 
             let view_template_secret_id = secret_id.clone();
-            let view_template_product_id = selected_product_id.clone();
+            let view_template_product_id = item_product_id.clone();
 
             let view_template_btn = rsx! {
                 button {
@@ -144,7 +114,7 @@ pub fn SecretsPage() -> Element {
                 }
             };
 
-            let edit_product_id = selected_product_id.clone();
+            let edit_product_id = item_product_id.clone();
 
             let edit_btn = rsx! {
                 button {
@@ -158,8 +128,8 @@ pub fn SecretsPage() -> Element {
                                 env_id: env_id.clone(),
                                 product_id,
                                 secret_id,
-                                on_ok: EventHandler::new(move |result: EditSecretResult| {
-                                    exec_save_secret(env_id.to_string(), result);
+                                on_ok: EventHandler::new(move |value| {
+                                    exec_save_secret(env_id.to_string(), value);
                                 }),
                             })
                     },
@@ -167,17 +137,24 @@ pub fn SecretsPage() -> Element {
                 }
             };
 
+            let delete_secret_product_id = item_product_id.clone();
+
             let delete_btn = rsx! {
                 button {
                     class: "btn btn-sm btn-danger",
                     onclick: move |_| {
                         let secret_id = delete_secret_button.clone();
+                        let product_id = delete_secret_product_id.clone();
                         let env_id = env_id_delete.clone();
                         consume_context::<Signal<DialogState>>()
                             .set(DialogState::Confirmation {
                                 content: format!("Delete secret {}", delete_secret_button.as_str()),
                                 on_ok: EventHandler::new(move |_| {
-                                    exec_delete_secret(env_id.to_string(), secret_id.to_string());
+                                    exec_delete_secret(
+                                        env_id.to_string(),
+                                        product_id.as_ref().map(|itm| itm.to_string()),
+                                        secret_id.to_string(),
+                                    );
                                 }),
                             });
                     },
@@ -187,7 +164,7 @@ pub fn SecretsPage() -> Element {
 
             let copy_to_env_selected_env_id = selected_env_id.clone();
             let copy_to_env_secret_id = secret_id.clone();
-            let copy_to_env_product_id = selected_product_id.clone();
+            let copy_to_env_product_id = item_product_id.clone();
 
             let copy_to_env = rsx! {
                 button {
@@ -225,9 +202,17 @@ pub fn SecretsPage() -> Element {
             };
 
             let env_id_show_secret = selected_env_id.clone();
-            let usage_product_id = selected_product_id.clone();
+            let usage_product_id = item_product_id.clone();
             let usage_secret_id = secret_id.clone();
 
+            let product_scope = match itm.product_id.as_ref() {
+                Some(product_id) => rsx! {
+                    span { class: "badge text-bg-light", {product_id.as_str()} }
+                },
+                None => rsx! {
+                    span { class: "badge text-bg-warning", "Shared" }
+                },
+            };
             rsx! {
                 tr { style: "border-top: 1px solid lightgray;",
                     td { style: "padding-left: 10px",
@@ -252,6 +237,7 @@ pub fn SecretsPage() -> Element {
                             }
                         }
                     }
+
                     td {
                         div { style: "padding: 0;",
                             span {
@@ -272,6 +258,7 @@ pub fn SecretsPage() -> Element {
                             }
                         }
                     }
+                    td { {product_scope} }
                     td { style: "padding: 10px",
                         "{itm.secret_id}"
                         {last_edited}
@@ -291,19 +278,20 @@ pub fn SecretsPage() -> Element {
             }
         });
 
-    let edit_secret_product_id = selected_product_id.clone();
+    let edit_secret_product_id = cs_ra.product_id.clone();
     rsx! {
         table { class: "table table-striped", style: "text-align: left;",
             thead {
                 tr {
                     th { style: "padding: 10px", colspan: "2", "Used" }
+                    th { "Product scope" }
                     th { style: "width:50%",
                         table {
                             tr {
                                 td {
                                     style: "cursor:pointer",
                                     onclick: move |_| {
-                                        component_state.write().order_by = OrderBy::Name;
+                                        cs.write().order_by = OrderBy::Name;
                                     },
                                     "Name {name_up}"
                                 }
@@ -328,7 +316,7 @@ pub fn SecretsPage() -> Element {
                     th {
                         style: "cursor:pointer",
                         onclick: move |_| {
-                            component_state.write().order_by = OrderBy::Updated;
+                            cs.write().order_by = OrderBy::Updated;
                         },
                         "Updated {updated_up}"
                     }
@@ -338,14 +326,14 @@ pub fn SecretsPage() -> Element {
                                 class: "btn btn-sm btn-primary",
                                 onclick: move |_| {
                                     let env_id = selected_env_id.clone();
-                                    let product_id = edit_secret_product_id.clone();
+                                    let product_id = Some(edit_secret_product_id.clone());
                                     consume_context::<Signal<DialogState>>()
                                         .set(DialogState::EditSecret {
                                             env_id: env_id.clone(),
                                             product_id,
                                             secret_id: "".to_string().into(),
-                                            on_ok: EventHandler::new(move |result: EditSecretResult| {
-                                                exec_save_secret(env_id.to_string(), result);
+                                            on_ok: EventHandler::new(move |value| {
+                                                exec_save_secret(env_id.to_string(), value);
                                             }),
                                         })
                                 },
@@ -360,20 +348,46 @@ pub fn SecretsPage() -> Element {
     }
 }
 
-fn exec_save_secret(env_id: String, result: EditSecretResult) {
+fn get_data<'s>(
+    mut ms: Signal<MainState>,
+    ms_ra: &'s MainState,
+    env_id: &str,
+    product_id: &str,
+) -> Result<&'s [SecretHttpModel], Element> {
+    match ms_ra.secrets.as_ref() {
+        RenderState::None => {
+            let env_id = env_id.to_string();
+            let product_id = product_id.to_string();
+
+            spawn(async move {
+                ms.write().secrets.set_loading();
+                match crate::api::secrets::load_secrets(env_id, product_id).await {
+                    Ok(value) => {
+                        ms.write().secrets.set_value(value);
+                    }
+                    Err(err) => {
+                        ms.write().secrets.set_error(err.to_string());
+                    }
+                }
+            });
+            return Err(crate::icons::loading_icon());
+        }
+        RenderState::Loading => {
+            return Err(crate::icons::loading_icon());
+        }
+        RenderState::Loaded(value) => Ok(value.as_slice()),
+        RenderState::Error(err) => {
+            return Err(crate::icons::render_error(err));
+        }
+    }
+}
+
+fn exec_save_secret(env_id: String, value: UpdateSecretValueHttpModel) {
+    if let Some(product_id) = value.product_id.as_ref() {
+        crate::storage::last_used_product::save(product_id);
+    }
     spawn(async move {
-        let product_id = consume_context::<Signal<MainState>>()
-            .read()
-            .get_selected_product_id();
-        match crate::api::secrets::save_secret(
-            env_id,
-            product_id.map(|itm| itm.to_string()),
-            result.secret_id,
-            result.value,
-            result.level,
-        )
-        .await
-        {
+        match crate::api::secrets::save_secret(env_id, value).await {
             Ok(_) => {
                 consume_context::<Signal<MainState>>().write().drop_data();
                 crate::ui_utils::show_toast("Secret is saved", ToastType::Info);
@@ -385,18 +399,9 @@ fn exec_save_secret(env_id: String, result: EditSecretResult) {
     });
 }
 
-fn exec_delete_secret(env_id: String, secret_id: String) {
+fn exec_delete_secret(env_id: String, product_id: Option<String>, secret_id: String) {
     spawn(async move {
-        let product_id = consume_context::<Signal<MainState>>()
-            .read()
-            .get_selected_product_id();
-        match crate::api::secrets::delete_secret(
-            env_id,
-            product_id.map(|itm| itm.to_string()),
-            secret_id,
-        )
-        .await
-        {
+        match crate::api::secrets::delete_secret(env_id, product_id, secret_id).await {
             Ok(_) => {
                 consume_context::<Signal<MainState>>().write().drop_data();
                 crate::ui_utils::show_toast("Secret is deleted", ToastType::Info);
@@ -408,7 +413,7 @@ fn exec_delete_secret(env_id: String, secret_id: String) {
     });
 }
 
-fn get_last_edited(secrets: &Vec<SecretHttpModel>) -> String {
+fn get_last_edited(secrets: &[SecretHttpModel]) -> String {
     let mut max = 0;
 
     let mut value = "".to_string();
@@ -423,41 +428,4 @@ fn get_last_edited(secrets: &Vec<SecretHttpModel>) -> String {
     }
 
     value
-}
-pub struct SecretsListState {
-    pub order_by: OrderBy,
-}
-
-impl SecretsListState {
-    pub fn new() -> Self {
-        Self {
-            order_by: OrderBy::Name,
-        }
-    }
-
-    pub fn sort<'a>(
-        &self,
-        secrets: impl Iterator<Item = &'a SecretHttpModel>,
-    ) -> BTreeMap<String, &'a SecretHttpModel> {
-        let mut result = BTreeMap::new();
-
-        match self.order_by {
-            OrderBy::Name => {
-                for secret in secrets {
-                    result.insert(secret.secret_id.clone(), secret);
-                }
-            }
-
-            OrderBy::Updated => {
-                for secret in secrets {
-                    result.insert(
-                        crate::utils::unix_microseconds_to_string(secret.updated).into_string(),
-                        secret,
-                    );
-                }
-            }
-        }
-
-        result
-    }
 }
