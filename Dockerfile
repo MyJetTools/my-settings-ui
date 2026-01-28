@@ -1,4 +1,4 @@
-FROM myjettools/dioxus-docker:0.7.0
+FROM myjettools/dioxus-docker:0.7.3
 
 ENV PORT=9001
 ENV IP=0.0.0.0

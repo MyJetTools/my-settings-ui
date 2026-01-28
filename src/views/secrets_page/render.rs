@@ -33,17 +33,10 @@ pub fn SecretsPage() -> Element {
 
     let last_edited = get_last_edited(secrets);
 
-    let sorted = cs_ra.sort(secrets.iter());
-
-    let (name_up, updated_up) = match cs_ra.order_by {
-        OrderBy::Name => ("▲", ""),
-        OrderBy::Updated => ("", "▲"),
-    };
-
-    let secrets = sorted
+    let secrets = secrets
         .into_iter()
-        .filter(|itm| filter_secret_read_access.filter(&itm.1))
-        .map(|(_, itm)| {
+        .filter(|itm| filter_secret_read_access.filter(itm))
+        .map(|itm| {
             let secret_id = Rc::new(itm.secret_id.to_string());
 
             let item_product_id = itm.product_id.clone().map(Rc::new);
@@ -293,7 +286,7 @@ pub fn SecretsPage() -> Element {
                                     onclick: move |_| {
                                         cs.write().order_by = OrderBy::Name;
                                     },
-                                    "Name {name_up}"
+                                    "Name"
                                 }
                                 td { style: "width:90%",
                                     div { class: "input-group",
@@ -318,7 +311,7 @@ pub fn SecretsPage() -> Element {
                         onclick: move |_| {
                             cs.write().order_by = OrderBy::Updated;
                         },
-                        "Updated {updated_up}"
+                        "Updated"
                     }
                     th {
                         div {

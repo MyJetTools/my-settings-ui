@@ -25,30 +25,4 @@ impl SecretsListState {
             product_id: Rc::new(product_id),
         }
     }
-
-    pub fn sort<'a>(
-        &self,
-        secrets: impl Iterator<Item = &'a SecretHttpModel>,
-    ) -> BTreeMap<String, &'a SecretHttpModel> {
-        let mut result = BTreeMap::new();
-
-        match self.order_by {
-            OrderBy::Name => {
-                for secret in secrets {
-                    result.insert(secret.secret_id.clone(), secret);
-                }
-            }
-
-            OrderBy::Updated => {
-                for secret in secrets {
-                    result.insert(
-                        crate::utils::unix_microseconds_to_string(secret.updated).into_string(),
-                        secret,
-                    );
-                }
-            }
-        }
-
-        result
-    }
 }

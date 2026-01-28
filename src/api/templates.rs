@@ -235,3 +235,11 @@ impl From<crate::server::templates_grpc::TemplateListItemGrpcModel> for Template
         }
     }
 }
+
+#[cfg(feature = "server")]
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+pub struct ExportItem {
+    pub product_id: String,
+    pub template_id: String,
+    pub yaml: String,
+}

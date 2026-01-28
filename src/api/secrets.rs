@@ -203,7 +203,7 @@ pub async fn load_secret_usage_by_templates(
     let response = ctx
         .secrets_grpc
         .get_templates_usage(GetTemplatesUsageGrpcRequest {
-            product_id: product_id.unwrap_or_default(),
+            product_id,
             secret_id,
         })
         .await
