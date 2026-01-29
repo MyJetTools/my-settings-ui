@@ -40,9 +40,15 @@ pub fn EditSecret(
         }),
     );
 
+    let box_shadow = if cs_ra.product_id.is_none() {
+        "box-shadow: 0 0 7px yellow;"
+    } else {
+        "box-shadow: 0 0 0px lightgray"
+    };
+
     let content = rsx! {
 
-        div { class: "form-floating mb-3",
+        div { class: "form-floating mb-3", style: box_shadow,
             {product_select}
             label { "Product scope" }
         }
