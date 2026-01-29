@@ -1,6 +1,6 @@
-use std::{collections::BTreeMap, rc::Rc};
+use std::rc::Rc;
 
-use crate::{models::SecretHttpModel, states::MainState};
+use crate::states::MainState;
 
 #[derive(Debug, Clone, Copy)]
 pub enum OrderBy {

@@ -7,9 +7,11 @@ impl DateTimeRfc3339 {
         &self.0[..19]
     }
 
+    /*
     pub fn into_string(self) -> String {
         self.0
     }
+     */
 }
 
 pub fn unix_microseconds_to_string(src: i64) -> DateTimeRfc3339 {
