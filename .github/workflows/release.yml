@@ -4,7 +4,7 @@ on:
     tags: ["*"]
 
 env:
-  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  IMAGE_NAME: ghcr.io/myjettools/my-settings-ui
   APP_NAME: my-settings-ui
   DELIVER_NAME: my-settings-ui
 
