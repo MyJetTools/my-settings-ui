@@ -20,8 +20,10 @@ pub fn ShowPopulatedYaml(
         Err(err) => return err,
     };
 
+    let yaml = highlight_yaml_errors(yaml);
+
     let content = rsx! {
-        textarea { class: "form-control modal-content-full-screen", readonly: true, {yaml} }
+        div { class: "form-control modal-content-full-screen", {yaml.into_iter()} }
     };
 
     rsx! {
@@ -74,5 +76,61 @@ impl ShowPopulatedYamlState {
         Self {
             yaml: DataState::new(),
         }
+    }
+}
+
+fn highlight_yaml_errors(yaml: &str) -> Vec<Element> {
+    let mut result = Vec::new();
+
+    for line in yaml.split('\n') {
+        let value = highlight(line);
+
+        let line = rsx! {
+            div { {value.into_iter()} }
+        };
+
+        result.push(line);
+    }
+
+    result
+}
+
+fn highlight(yaml: &str) -> Vec<Element> {
+    let mut yaml = yaml;
+    let mut result = Vec::new();
+
+    loop {
+        dioxus_utils::console_log(yaml);
+        let start_index = yaml.find("/*");
+
+        let Some(start_index) = start_index else {
+            result.push(rsx! {
+                {yaml}
+            });
+            return result;
+        };
+
+        result.push(rsx! {
+            {&yaml[..start_index]}
+        });
+
+        yaml = &yaml[start_index..];
+
+        let end_index = yaml.find("*/");
+
+        let Some(end_index) = end_index else {
+            result.push(rsx! {
+                span { style: "color:red", {yaml} }
+
+            });
+            return result;
+        };
+
+        result.push(rsx! {
+            span { style: "color:red", {&yaml[..end_index + 2]} }
+
+        });
+
+        yaml = &yaml[end_index + 2..];
     }
 }
