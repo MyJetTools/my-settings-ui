@@ -19,9 +19,9 @@ pub fn TemplatesPage() -> Element {
     let ms = consume_context::<Signal<MainState>>();
     let ms_ra = ms.read();
 
-    let selected_env = ms_ra.get_selected_env();
+    let selected_env = Rc::new(crate::storage::selected_env::get());
 
-    let templates = match get_data(&ms_ra, selected_env.clone()) {
+    let templates = match get_data(&ms_ra, &selected_env) {
         Ok(items) => items,
         Err(err) => return err,
     };
@@ -431,15 +431,15 @@ fn get_last_edited(templates: &[Rc<TemplateHttpModel>]) -> (String, String) {
 
 fn get_data<'s>(
     ms_ra: &'s MainState,
-    selected_env: Rc<String>,
+    selected_env: &str,
 ) -> Result<&'s [Rc<TemplateHttpModel>], Element> {
     match ms_ra.templates.as_ref() {
         RenderState::None => {
-            let env_id_request = selected_env.clone();
+            let env_id_request = selected_env.to_string();
             spawn(async move {
                 let mut ms = consume_context::<Signal<MainState>>();
                 ms.write().templates.set_loading();
-                match crate::api::templates::get_templates(env_id_request.to_string()).await {
+                match crate::api::templates::get_templates(env_id_request).await {
                     Ok(templates) => {
                         ms.write().set_templates_as_loaded(templates);
                     }

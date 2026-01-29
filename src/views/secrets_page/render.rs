@@ -14,7 +14,7 @@ pub fn SecretsPage() -> Element {
 
     let ms_ra = ms.read();
 
-    let selected_env_id = ms_ra.get_selected_env();
+    let selected_env_id = Rc::new(crate::storage::selected_env::get());
 
     let mut cs = use_signal(|| SecretsListState::new(&ms_ra));
 

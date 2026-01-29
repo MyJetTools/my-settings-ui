@@ -1,3 +1,2 @@
-pub const ENV_LOCAL_STORAGE_KEY: &str = "env";
-
 pub mod last_used_product;
+pub mod selected_env;

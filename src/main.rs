@@ -139,7 +139,8 @@ fn init_envs(mut ms: Signal<MainState>, ms_ra: &MainState) -> Result<(), Element
                 };
 
                 let envs: Vec<_> = envs_resp.envs.into_iter().map(Rc::new).collect();
-                let selected_env = envs.first().unwrap().clone();
+
+                let selected_env = get_env(&envs);
 
                 let templates =
                     match crate::api::templates::get_templates(selected_env.to_string()).await {
@@ -151,7 +152,6 @@ fn init_envs(mut ms: Signal<MainState>, ms_ra: &MainState) -> Result<(), Element
                     };
 
                 let mut write_access = ms.write();
-                write_access.set_envs(envs, selected_env);
                 write_access.user = envs_resp.name;
                 write_access.prompt_ssh_key = Some(envs_resp.prompt_ssh_pass_key);
                 write_access.set_templates_as_loaded(templates);
@@ -185,4 +185,21 @@ fn init_envs(mut ms: Signal<MainState>, ms_ra: &MainState) -> Result<(), Element
             return Err(result);
         }
     }
+}
+
+fn get_env(envs: &[Rc<String>]) -> Rc<String> {
+    let selected_env = crate::storage::selected_env::get();
+
+    for env in envs {
+        if env.as_str() == selected_env.as_str() {
+            return env.clone();
+        }
+    }
+
+    if let Some(first) = envs.first() {
+        crate::storage::selected_env::save(first.as_str());
+        return first.clone();
+    }
+
+    Rc::new(String::new())
 }

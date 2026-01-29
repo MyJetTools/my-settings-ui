@@ -6,7 +6,7 @@ use crate::states::*;
 pub fn EnvsSelector() -> Element {
     let main_state = consume_context::<Signal<MainState>>();
 
-    let selected_env = main_state.read().get_selected_env();
+    let selected_env = crate::storage::selected_env::get();
 
     let main_state_read_access = main_state.read();
 
@@ -37,9 +37,10 @@ pub fn EnvsSelector() -> Element {
 
             oninput: move |ctx| {
                 let value = ctx.value();
+                crate::storage::selected_env::save(value.as_str());
                 consume_context::<Signal<MainState>>()
                     .write()
-                    .active_env_changed(value.as_str());
+                    .drop_data();
             },
             {envs_options}
         }
