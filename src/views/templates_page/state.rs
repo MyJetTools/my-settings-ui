@@ -2,9 +2,12 @@ use std::collections::HashMap;
 
 use rust_extensions::ShortString;
 
+use crate::models::TemplateHttpModel;
+
 pub struct TemplatesState {
     pub selected: HashMap<String, (String, String)>,
     pub product_id: Option<String>,
+    pub filter: String,
 }
 
 impl Default for TemplatesState {
@@ -12,6 +15,7 @@ impl Default for TemplatesState {
         Self {
             selected: Default::default(),
             product_id: crate::storage::last_used_product::get(),
+            filter: Default::default(),
         }
     }
 }
@@ -49,6 +53,19 @@ impl TemplatesState {
         }
 
         result
+    }
+
+    pub fn filter_record(&self, item: &TemplateHttpModel) -> bool {
+        if let Some(product_id) = self.product_id.as_ref() {
+            if item.product_id.as_str() != product_id.as_str() {
+                return false;
+            }
+        }
+
+        if self.filter.len() == 0 {
+            return true;
+        }
+        true
     }
 }
 

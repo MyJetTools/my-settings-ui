@@ -78,7 +78,6 @@ fn MyLayout() -> Element {
 
     use_context_provider(|| Signal::new(DialogState::None));
     use_context_provider(|| Signal::new(FilterSecret::new()));
-    use_context_provider(|| Signal::new(FilterTemplate::new()));
 
     let ms = consume_context::<Signal<MainState>>();
 

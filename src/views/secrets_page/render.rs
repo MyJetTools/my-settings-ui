@@ -10,7 +10,7 @@ use super::state::*;
 
 #[component]
 pub fn SecretsPage() -> Element {
-    let ms = consume_context::<Signal<MainState>>();
+    let mut ms = consume_context::<Signal<MainState>>();
 
     let ms_ra = ms.read();
 
@@ -272,12 +272,30 @@ pub fn SecretsPage() -> Element {
         });
 
     let edit_secret_product_id = cs_ra.product_id.clone();
+
+    let select_product = crate::components::select_product(
+        &ms_ra,
+        None,
+        Some(cs_ra.product_id.as_str()),
+        false,
+        EventHandler::new(move |value: Option<String>| {
+            if let Some(value) = value {
+                crate::storage::last_used_product::save(value.as_str());
+                cs.write().product_id = Rc::new(value);
+                ms.write().secrets.reset();
+            }
+        }),
+    );
+
     rsx! {
         table { class: "table table-striped", style: "text-align: left;",
             thead {
                 tr {
                     th { style: "padding: 10px", colspan: "2", "Used" }
-                    th { "Product scope" }
+                    th {
+                        "Product scope"
+                        {select_product}
+                    }
                     th { style: "width:50%",
                         table {
                             tr {

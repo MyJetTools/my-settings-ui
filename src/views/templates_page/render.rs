@@ -28,13 +28,10 @@ pub fn TemplatesPage() -> Element {
 
     let selected_env_id_to_copy = selected_env.clone();
 
-    let mut filter_template = consume_context::<Signal<FilterTemplate>>();
-    let filter_template_read_access = filter_template.read();
-
     let last_edited = get_last_edited(templates);
     let templates = templates
         .iter()
-        .filter(|itm| filter_template_read_access.filter_record(itm))
+        .filter(|itm| cs_ra.filter_record(itm))
         .map(|itm| {
             let last_request = if itm.last_requests == 0 {
                 "".to_string()
@@ -322,7 +319,10 @@ pub fn TemplatesPage() -> Element {
         None,
         cs_ra.product_id.as_deref(),
         false,
-        EventHandler::new(move |value| {
+        EventHandler::new(move |value: Option<String>| {
+            if let Some(value) = value.as_ref() {
+                crate::storage::last_used_product::save(value);
+            }
             cs.write().product_id = value;
         }),
     );
@@ -347,9 +347,9 @@ pub fn TemplatesPage() -> Element {
                                         span { class: "input-group-text", SearchIcon {} }
                                         input {
                                             class: "form-control form-control-sm",
-                                            value: filter_template_read_access.as_str(),
+                                            value: cs_ra.filter.as_str(),
                                             oninput: move |cx| {
-                                                filter_template.write().set_value(cx.value().as_str());
+                                                cs.write().filter = cx.value();
                                             },
                                         }
                                     }
