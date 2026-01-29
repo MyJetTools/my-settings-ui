@@ -65,7 +65,8 @@ impl TemplatesState {
         if self.filter.len() == 0 {
             return true;
         }
-        true
+
+        item.template_id.contains(self.filter.as_str())
     }
 }
 
