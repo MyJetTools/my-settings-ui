@@ -124,6 +124,7 @@ fn init_envs(mut ms: Signal<MainState>, ms_ra: &MainState) -> Result<(), Element
     match ms_ra.envs.as_ref() {
         RenderState::None => {
             spawn(async move {
+                ms.write().envs.set_loading();
                 let envs_resp = match crate::api::envs::get_envs().await {
                     Ok(resp) => {
                         if resp.envs.is_empty() {
@@ -155,6 +156,7 @@ fn init_envs(mut ms: Signal<MainState>, ms_ra: &MainState) -> Result<(), Element
                 write_access.user = envs_resp.name;
                 write_access.prompt_ssh_key = Some(envs_resp.prompt_ssh_pass_key);
                 write_access.set_templates_as_loaded(templates);
+                write_access.envs.set_value(envs);
             });
             let result = rsx! {
                 div { "Loading envs..." }
