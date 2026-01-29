@@ -6,7 +6,7 @@ on:
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository }}
   APP_NAME: my-settings-ui
-  DELIVER_NAME: ${{ github.repository }}
+  DELIVER_NAME: my-settings-ui
 
 jobs:
   build:
