@@ -1,8 +1,13 @@
-use std::time::Duration;
+use rust_extensions::date_time::DateTimeAsMicroseconds;
 
 pub struct DateTimeRfc3339(String);
 
 impl DateTimeRfc3339 {
+    pub fn from_dt(dt: DateTimeAsMicroseconds) -> Self {
+        let as_string = dt.to_rfc3339();
+        Self(as_string)
+    }
+
     pub fn without_microseconds(&self) -> &str {
         &self.0[..19]
     }
@@ -15,8 +20,7 @@ impl DateTimeRfc3339 {
 }
 
 pub fn unix_microseconds_to_string(src: i64) -> DateTimeRfc3339 {
-    let d = std::time::UNIX_EPOCH + Duration::from_micros(src as u64);
-    let dt = chrono::DateTime::<chrono::Utc>::from(d);
+    let dt = DateTimeAsMicroseconds::from(src);
     DateTimeRfc3339(dt.to_rfc3339())
 }
 /*

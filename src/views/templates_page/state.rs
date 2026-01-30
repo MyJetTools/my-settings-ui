@@ -10,17 +10,15 @@ pub struct TemplatesState {
     pub filter: String,
 }
 
-impl Default for TemplatesState {
-    fn default() -> Self {
+impl TemplatesState {
+    pub fn new(env_id: &str) -> Self {
         Self {
             selected: Default::default(),
-            product_id: crate::storage::last_used_product::get(),
+            product_id: crate::storage::last_used_product::get(env_id),
             filter: Default::default(),
         }
     }
-}
 
-impl TemplatesState {
     pub fn is_selected(&self, product_id: &str, template_id: &str) -> bool {
         let id = generate_id(product_id, template_id);
 

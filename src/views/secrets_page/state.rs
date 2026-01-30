@@ -14,8 +14,8 @@ pub struct SecretsListState {
 }
 
 impl SecretsListState {
-    pub fn new(ms_ra: &MainState) -> Self {
-        let product_id = match crate::storage::last_used_product::get() {
+    pub fn new(env_id: &str, ms_ra: &MainState) -> Self {
+        let product_id = match crate::storage::last_used_product::get(env_id) {
             Some(product_id) => product_id,
             None => ms_ra.products.first().cloned().unwrap_or_default(),
         };

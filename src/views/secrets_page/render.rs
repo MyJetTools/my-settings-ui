@@ -16,7 +16,7 @@ pub fn SecretsPage() -> Element {
 
     let selected_env_id = Rc::new(crate::storage::selected_env::get());
 
-    let mut cs = use_signal(|| SecretsListState::new(&ms_ra));
+    let mut cs = use_signal(|| SecretsListState::new(selected_env_id.as_str(), &ms_ra));
 
     let cs_ra = cs.read();
 
@@ -273,6 +273,7 @@ pub fn SecretsPage() -> Element {
 
     let edit_secret_product_id = cs_ra.product_id.clone();
 
+    let select_product_env_id = selected_env_id.clone();
     let select_product = crate::components::select_product(
         &ms_ra,
         None,
@@ -280,7 +281,10 @@ pub fn SecretsPage() -> Element {
         false,
         EventHandler::new(move |value: Option<String>| {
             if let Some(value) = value {
-                crate::storage::last_used_product::save(value.as_str());
+                crate::storage::last_used_product::save(
+                    select_product_env_id.as_str(),
+                    value.as_str(),
+                );
                 cs.write().product_id = Rc::new(value);
                 ms.write().secrets.reset();
             }
@@ -395,7 +399,7 @@ fn get_data<'s>(
 
 fn exec_save_secret(env_id: String, value: UpdateSecretValueHttpModel) {
     if let Some(product_id) = value.product_id.as_ref() {
-        crate::storage::last_used_product::save(product_id);
+        crate::storage::last_used_product::save(env_id.as_str(), product_id);
     }
     spawn(async move {
         match crate::api::secrets::save_secret(env_id, value).await {

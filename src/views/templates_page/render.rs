@@ -3,8 +3,11 @@ use std::rc::Rc;
 use crate::dialogs::states::EditTemplateDialogData;
 use crate::icons::*;
 use crate::models::*;
+use crate::utils::DateTimeRfc3339;
 use crate::{states::*, ui_utils::ToastType};
 use dioxus::prelude::*;
+use rust_extensions::date_time::DateTimeAsMicroseconds;
+use rust_extensions::duration_utils::DurationExtensions;
 
 use crate::dialogs::*;
 use dioxus_utils::*;
@@ -13,13 +16,16 @@ use super::state::*;
 
 #[component]
 pub fn TemplatesPage() -> Element {
-    let mut cs = use_signal(|| TemplatesState::default());
+
+    let now = dioxus_utils::now_date_time();
+     let selected_env = Rc::new(crate::storage::selected_env::get());
+    let mut cs = use_signal(|| TemplatesState::new(selected_env.as_str()));
     let cs_ra = cs.read();
 
     let ms = consume_context::<Signal<MainState>>();
     let ms_ra = ms.read();
 
-    let selected_env = Rc::new(crate::storage::selected_env::get());
+   
 
     let templates = match get_data(&ms_ra, &selected_env) {
         Ok(items) => items,
@@ -33,12 +39,20 @@ pub fn TemplatesPage() -> Element {
         .iter()
         .filter(|itm| cs_ra.filter_record(itm))
         .map(|itm| {
-            let last_request = if itm.last_requests == 0 {
-                "".to_string()
+            let (last_request, last_duration) = if itm.last_requests == 0 {
+                (String::new(), String::new())
             } else {
-                crate::utils::unix_microseconds_to_string(itm.last_requests * 1000)
+
+                let dt = DateTimeAsMicroseconds::from(itm.last_requests); 
+
+                let duration = now.duration_since(dt);
+                let as_string = DateTimeRfc3339::from_dt(dt);
+                let dt = as_string
                     .without_microseconds()
-                    .to_string()
+                    .to_string();
+
+
+                    (dt, duration.as_positive_or_zero().format_to_string())
             };
 
             let template_to_copy = itm.clone();
@@ -181,7 +195,10 @@ pub fn TemplatesPage() -> Element {
                     }
                     td { {created.without_microseconds()} }
                     td { {updated.without_microseconds()} }
-                    td { "{last_request}" }
+                    td {
+                        div { style: "textsize:9px", "{last_request}" }
+                        div { "{last_duration}" }
+                    }
                     td {
                         div { class: "btn-group",
                             {copy_to_env}
@@ -314,6 +331,8 @@ pub fn TemplatesPage() -> Element {
         }
     };
 
+
+    let select_product_env_id = selected_env.clone();
     let select_product = crate::components::select_product(
         &ms_ra,
         None,
@@ -321,7 +340,7 @@ pub fn TemplatesPage() -> Element {
         false,
         EventHandler::new(move |value: Option<String>| {
             if let Some(value) = value.as_ref() {
-                crate::storage::last_used_product::save(value);
+                crate::storage::last_used_product::save(select_product_env_id.as_str(), value);
             }
             cs.write().product_id = value;
         }),
@@ -377,7 +396,7 @@ fn exec_save_template(
     env_id: String,
     data: UpdateTemplateHttpModel,
 ) {
-    crate::storage::last_used_product::save(&data.product_id);
+    crate::storage::last_used_product::save(env_id.as_str(), &data.product_id);
 
     spawn(async move {
         let product_id = data.product_id.clone();
